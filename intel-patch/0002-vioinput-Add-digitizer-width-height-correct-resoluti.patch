@@ -1,0 +1,124 @@
+From 396aa6a596b010cbc874b07db50a5f20b0dbb6f3 Mon Sep 17 00:00:00 2001
+From: Colin Xu <colin.xu@intel.com>
+Date: Wed, 3 Feb 2021 09:39:33 +0800
+Subject: [PATCH 2/2] vioinput: Add digitizer width/height, correct resolution.
+
+Signed-off-by: Colin Xu <colin.xu@intel.com>
+---
+ vioinput/sys/Hid.h       |  2 ++
+ vioinput/sys/HidTablet.c | 35 ++++++++++++++++++++++++++++++-----
+ 2 files changed, 32 insertions(+), 5 deletions(-)
+
+diff --git a/vioinput/sys/Hid.h b/vioinput/sys/Hid.h
+index 8147105b..e9d762d9 100644
+--- a/vioinput/sys/Hid.h
++++ b/vioinput/sys/Hid.h
+@@ -81,6 +81,8 @@
+ #ifndef HID_USAGE_DIGITIZER_FINGER
+ #define HID_USAGE_DIGITIZER_FINGER             0x22
+ #endif
++#define HID_USAGE_DIGITIZER_CONTACT_WIDTH      0x48
++#define HID_USAGE_DIGITIZER_CONTACT_HEIGHT     0x49
+ #define HID_USAGE_DIGITIZER_CONTACT_ID         0x51
+ #define HID_USAGE_DIGITIZER_CONTACT_COUNT      0x54
+ #define HID_USAGE_DIGITIZER_CONTACT_COUNT_MAX  0x55
+diff --git a/vioinput/sys/HidTablet.c b/vioinput/sys/HidTablet.c
+index ba199d1a..b1cb67e1 100644
+--- a/vioinput/sys/HidTablet.c
++++ b/vioinput/sys/HidTablet.c
+@@ -56,6 +56,8 @@ typedef struct _tagInputClassTabletSlot
+     USHORT uContactID;
+     USHORT uAxisX;
+     USHORT uAxisY;
++    USHORT uWidth;
++    USHORT uHeight;
+ } INPUT_CLASS_TABLET_SLOT, *PINPUT_CLASS_TABLET_SLOT;
+ #pragma pack(pop)
+ 
+@@ -249,6 +251,12 @@ HIDTabletEventToReport(
+                     }
+                 }
+                 break;
++            case ABS_MT_TOUCH_MAJOR:
++                pReportSlot->uWidth = (USHORT)pEvent->value;
++                break;
++            case ABS_MT_TOUCH_MINOR:
++                pReportSlot->uHeight = (USHORT)pEvent->value;
++                break;
+             case ABS_MT_POSITION_X:
+                 pReportSlot->uAxisX = (USHORT)pEvent->value;
+                 break;
+@@ -589,6 +597,11 @@ HIDTabletProbe(
+     {
+         pTabletDesc->pTrackingID[uNumContacts].uID = -1;
+         pTabletDesc->pTrackingID[uNumContacts].bPendingDel = FALSE;
++        if (pTabletDesc->bMT)
++        {
++            pTabletDesc->pContactStat[uNumContacts].uWidth = 1;
++            pTabletDesc->pContactStat[uNumContacts].uHeight = 1;
++        }
+     }
+ 
+     // claim our buttons from the pAxes bitmap
+@@ -669,8 +682,8 @@ HIDTabletProbe(
+ 
+         // Change to generic desktop page for coordinates
+         HIDAppend2(pHidDesc, HID_TAG_USAGE_PAGE, HID_USAGE_PAGE_GENERIC);
+-        HIDAppend2(pHidDesc, HID_TAG_UNIT_EXPONENT, 0x0D); // 10^(-3)
+-        HIDAppend2(pHidDesc, HID_TAG_UNIT, 0x00);          // none
++        HIDAppend2(pHidDesc, HID_TAG_UNIT_EXPONENT, 0x0E); // 10^(-2)
++        HIDAppend2(pHidDesc, HID_TAG_UNIT, 0x11);          // Linear Centimeter
+ 
+         // 2 bytes each axis
+         for (uAxisCode = ABS_X; uAxisCode <= ABS_Y; uAxisCode++)
+@@ -685,10 +698,13 @@ HIDTabletProbe(
+             // Device Class Definition for HID 1.11, 6.2.2.7
+             // Resolution = (Logical Maximum - Logical Minimum) /
+             //    ((Physical Maximum - Physical Minimum) * (10 Unit Exponent))
++            // struct input_absinfo{}.res reports in units/mm, convert to cm.
+             HIDAppend2(pHidDesc, HID_TAG_LOGICAL_MINIMUM, AbsInfo.min);
+             HIDAppend2(pHidDesc, HID_TAG_LOGICAL_MAXIMUM, AbsInfo.max);
+-            HIDAppend2(pHidDesc, HID_TAG_PHYSICAL_MINIMUM, AbsInfo.min);
+-            HIDAppend2(pHidDesc, HID_TAG_PHYSICAL_MAXIMUM, AbsInfo.max);
++            HIDAppend2(pHidDesc, HID_TAG_PHYSICAL_MINIMUM,
++                (AbsInfo.res == 0) ? AbsInfo.min : (AbsInfo.min * 10 / AbsInfo.res));
++            HIDAppend2(pHidDesc, HID_TAG_PHYSICAL_MAXIMUM,
++                (AbsInfo.res == 0) ? AbsInfo.max : (AbsInfo.max * 10 / AbsInfo.res));
+ 
+             HIDAppend2(pHidDesc, HID_TAG_USAGE,
+                 (uAxisCode == ABS_X ? HID_USAGE_GENERIC_X : HID_USAGE_GENERIC_Y));
+@@ -696,6 +712,13 @@ HIDTabletProbe(
+             HIDAppend2(pHidDesc, HID_TAG_INPUT, HID_DATA_FLAG_VARIABLE);
+         }
+ 
++        // 2 bytes for contact width/height
++        HIDAppend2(pHidDesc, HID_TAG_USAGE_PAGE, HID_USAGE_PAGE_DIGITIZER);
++        HIDAppend2(pHidDesc, HID_TAG_USAGE, HID_USAGE_DIGITIZER_CONTACT_WIDTH);
++        HIDAppend2(pHidDesc, HID_TAG_INPUT, HID_DATA_FLAG_VARIABLE);
++        HIDAppend2(pHidDesc, HID_TAG_USAGE, HID_USAGE_DIGITIZER_CONTACT_HEIGHT);
++        HIDAppend2(pHidDesc, HID_TAG_INPUT, HID_DATA_FLAG_VARIABLE);
++
+         HIDAppend1(pHidDesc, HID_TAG_END_COLLECTION); //HID_COLLECTION_LOGICAL
+     }
+ 
+@@ -715,7 +738,7 @@ HIDTabletProbe(
+     {
+         HIDAppend2(pHidDesc, HID_TAG_USAGE, HID_USAGE_DIGITIZER_SCAN_TIME);
+         HIDAppend2(pHidDesc, HID_TAG_UNIT_EXPONENT, 0x0A); // 10^(-4), 100 us
+-        HIDAppend2(pHidDesc, HID_TAG_UNIT, 0x01); // Time system in unit of s
++        HIDAppend2(pHidDesc, HID_TAG_UNIT, 0x1001); // Time system in unit of s
+         HIDAppend2(pHidDesc, HID_TAG_LOGICAL_MAXIMUM, LONG_MAX);
+         HIDAppend2(pHidDesc, HID_TAG_REPORT_SIZE, 0x20);
+         HIDAppend2(pHidDesc, HID_TAG_REPORT_COUNT, 0x01);
+@@ -763,6 +786,8 @@ HIDTabletProbe(
+         else
+         {
+             pReport[HID_REPORT_DATA_OFFSET + sizeof(INPUT_CLASS_TABLET_SLOT) * pTabletDesc->uMaxContacts] = 1;
++            ((PINPUT_CLASS_TABLET_SLOT)&pReport[HID_REPORT_DATA_OFFSET])->uWidth = 1;
++            ((PINPUT_CLASS_TABLET_SLOT)&pReport[HID_REPORT_DATA_OFFSET])->uHeight = 1;
+         }
+     }
+ 
+-- 
+2.28.0.windows.1
+
