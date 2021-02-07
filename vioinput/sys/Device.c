@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Device related functions
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -69,29 +69,32 @@ VIOInputInitInterruptHandling(
     if (!NT_SUCCESS(status))
     {
         TraceEvents(TRACE_LEVEL_ERROR, DBG_HW_ACCESS,
-            "Failed to create control queue interrupt: %x\n", status);
+                    "Failed to create control queue interrupt: %x\n", status);
         return status;
     }
 
     WDF_INTERRUPT_CONFIG_INIT(&interruptConfig,
-        VIOInputInterruptIsr, VIOInputQueuesInterruptDpc);
+                              VIOInputInterruptIsr, VIOInputQueuesInterruptDpc);
 
     interruptConfig.EvtInterruptEnable = VIOInputInterruptEnable;
     interruptConfig.EvtInterruptDisable = VIOInputInterruptDisable;
 
     status = WdfInterruptCreate(hDevice, &interruptConfig, WDF_NO_OBJECT_ATTRIBUTES,
-        &pContext->QueuesInterrupt);
+                                &pContext->QueuesInterrupt);
 
     if (!NT_SUCCESS(status))
     {
         TraceEvents(TRACE_LEVEL_ERROR, DBG_HW_ACCESS,
-            "Failed to create general queue interrupt: %x\n", status);
+                    "Failed to create general queue interrupt: %x\n", status);
         return status;
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS, "<-- %s\n", __FUNCTION__);
     return status;
 }
+
+extern void HIDInitialzeData(WDFDEVICE device);
+extern void HIDReleaseData();
 
 NTSTATUS
 VIOInputEvtDeviceAdd(
@@ -198,6 +201,8 @@ VIOInputEvtDeviceAdd(
         return status;
     }
 
+    HIDInitialzeData(hDevice);
+
     RtlZeroMemory(&pContext->HidDeviceAttributes, sizeof(HID_DEVICE_ATTRIBUTES));
     pContext->HidDeviceAttributes.Size = sizeof(HID_DEVICE_ATTRIBUTES);
     pContext->HidDeviceAttributes.VendorID = HIDMINI_VID;
@@ -253,17 +258,22 @@ VIOInputEvtDevicePrepareHardware(
     pContext->StatusQMemBlock = VirtIOWdfDeviceAllocDmaMemorySliced(
         &pContext->VDevice.VIODevice, PAGE_SIZE, sizeof(VIRTIO_INPUT_EVENT_WITH_REQUEST));
 
-    if (!pContext->EventQMemBlock || !pContext->StatusQMemBlock) {
+    if (!pContext->EventQMemBlock || !pContext->StatusQMemBlock)
+    {
         VIOInputFreeMemBlocks(pContext);
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
+    // pContext record the descriptor
+    //
     // Figure out what kind of input device this is and build a
     // corresponding HID report descriptor.
     status = VIOInputBuildReportDescriptor(pContext);
 
     if (NT_SUCCESS(status) && !pContext->bChildPdoCreated)
     {
+        // create pdo from pContext
+        //
         // Create a child PDO with an instance path based on the
         // HID report descriptor (hash). This is to make sure that
         // the devnode won't be reused when a different virtio
@@ -396,6 +406,8 @@ VIOInputEvtDeviceReleaseHardware(
     PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS, "--> %s\n", __FUNCTION__);
+
+    HIDReleaseData();
 
     VirtIOWdfShutdown(&pContext->VDevice);
 
@@ -586,8 +598,8 @@ VIOInputEvtDeviceD0Exit(
     PINPUT_DEVICE pContext = GetDeviceContext(Device);
     PVIRTIO_INPUT_EVENT buf;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_PNP,"--> %s TargetState: %d\n",
-        __FUNCTION__, TargetState);
+    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_PNP, "--> %s TargetState: %d\n",
+                __FUNCTION__, TargetState);
 
     PAGED_CODE();
 

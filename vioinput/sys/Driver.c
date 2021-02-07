@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Main driver file containing DriverEntry and driver related functions
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -41,6 +41,8 @@ DRIVER_INITIALIZE DriverEntry;
 // Annotate the prototype to make static analysis happy.
 EVT_WDF_OBJECT_CONTEXT_CLEANUP _IRQL_requires_(PASSIVE_LEVEL) VIOInputEvtDriverContextCleanup;
 
+extern void HIDReleaseData();
+
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (INIT, DriverEntry)
 #pragma alloc_text (PAGE, VIOInputEvtDriverContextCleanup)
@@ -62,10 +64,10 @@ DriverEntry(
     InitializeDebugPrints(DriverObject, RegistryPath);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_INIT,
-        "Virtio-input driver started...built on %s %s\n", __DATE__, __TIME__);
+                "Virtio-input driver started...built on %s %s\n", __DATE__, __TIME__);
 
-    WDF_DRIVER_CONFIG_INIT(&config,VIOInputEvtDeviceAdd);
-    config.DriverPoolTag  = VIOINPUT_DRIVER_MEMORY_TAG;
+    WDF_DRIVER_CONFIG_INIT(&config, VIOInputEvtDeviceAdd);
+    config.DriverPoolTag = VIOINPUT_DRIVER_MEMORY_TAG;
 
     WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
     attributes.EvtCleanupCallback = VIOInputEvtDriverContextCleanup;
@@ -79,7 +81,7 @@ DriverEntry(
     if (!NT_SUCCESS(status))
     {
         TraceEvents(TRACE_LEVEL_ERROR, DBG_INIT,
-           "WdfDriverCreate failed - 0x%x\n", status);
+                    "WdfDriverCreate failed - 0x%x\n", status);
         WPP_CLEANUP(DriverObject);
         return status;
     }
