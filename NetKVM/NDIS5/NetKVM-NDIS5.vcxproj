@@ -42,7 +42,7 @@
     <RootNamespace>NetKVMNDIS5</RootNamespace>
     <SignMode>Off</SignMode>
     <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
     <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>

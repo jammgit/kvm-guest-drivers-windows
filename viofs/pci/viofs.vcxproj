@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Win10 Release|Win32">
       <Configuration>Win10 Release</Configuration>
@@ -37,7 +37,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{209e8947-494d-4104-b44b-530cb68a6494}</ProjectGuid>
     <TemplateGuid>{CCDA0DA1-4369-44F1-B6C0-588CA33A5551}</TemplateGuid>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
     <Configuration>Win8 Release</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>

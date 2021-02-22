@@ -15,6 +15,16 @@
 #pragma once
 
 #include <ntddk.h>
+#include <wdm.h>
+//#include <wdf.h>
+
+//#include <initguid.h> // required for GUID definitions
+//#include <wdmguid.h> // required for WMILIB_CONTEXT
+//#include <wmistr.h>
+//#include <wmilib.h>
+#include <ntintsafe.h>
+#include <hidport.h>
+#include <hidusage.h>
 
 #define ENOSPC 1
 

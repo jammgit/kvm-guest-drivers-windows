@@ -111,7 +111,8 @@
 #define VIRTIO_PCI_CAP_PCI_CFG      5
 
 /* This is the PCI capability header: */
-struct virtio_pci_cap {
+struct virtio_pci_cap
+{
     __u8 cap_vndr;      /* Generic PCI field: PCI_CAPABILITY_ID_VENDOR_SPECIFIC */
     __u8 cap_next;      /* Generic PCI field: next ptr. */
     __u8 cap_len;       /* Generic PCI field: capability length */
@@ -122,13 +123,15 @@ struct virtio_pci_cap {
     __le32 length;      /* Length of the structure, in bytes. */
 };
 
-struct virtio_pci_notify_cap {
+struct virtio_pci_notify_cap
+{
     struct virtio_pci_cap cap;
     __le32 notify_off_multiplier;   /* Multiplier for queue_notify_off. */
 };
 
 /* Fields in VIRTIO_PCI_CAP_COMMON_CFG: */
-struct virtio_pci_common_cfg {
+struct virtio_pci_common_cfg
+{
     /* About the whole device. */
     __le32 device_feature_select;   /* read-write */
     __le32 device_feature;          /* read-only */
@@ -165,34 +168,35 @@ typedef struct virtio_queue_info
     void *queue;
 } VirtIOQueueInfo;
 
-typedef struct virtio_system_ops {
+typedef struct virtio_system_ops
+{
     // device register access
-    u8 (*vdev_read_byte)(ULONG_PTR ulRegister);
-    u16 (*vdev_read_word)(ULONG_PTR ulRegister);
-    u32 (*vdev_read_dword)(ULONG_PTR ulRegister);
-    void (*vdev_write_byte)(ULONG_PTR ulRegister, u8 bValue);
-    void (*vdev_write_word)(ULONG_PTR ulRegister, u16 wValue);
-    void (*vdev_write_dword)(ULONG_PTR ulRegister, u32 ulValue);
+    u8(*vdev_read_byte)(ULONG_PTR ulRegister);
+    u16(*vdev_read_word)(ULONG_PTR ulRegister);
+    u32(*vdev_read_dword)(ULONG_PTR ulRegister);
+    void(*vdev_write_byte)(ULONG_PTR ulRegister, u8 bValue);
+    void(*vdev_write_word)(ULONG_PTR ulRegister, u16 wValue);
+    void(*vdev_write_dword)(ULONG_PTR ulRegister, u32 ulValue);
 
     // memory management
     void *(*mem_alloc_contiguous_pages)(void *context, size_t size);
-    void (*mem_free_contiguous_pages)(void *context, void *virt);
-    ULONGLONG (*mem_get_physical_address)(void *context, void *virt);
+    void(*mem_free_contiguous_pages)(void *context, void *virt);
+    ULONGLONG(*mem_get_physical_address)(void *context, void *virt);
     void *(*mem_alloc_nonpaged_block)(void *context, size_t size);
-    void (*mem_free_nonpaged_block)(void *context, void *addr);
+    void(*mem_free_nonpaged_block)(void *context, void *addr);
 
     // PCI config space access
-    int (*pci_read_config_byte)(void *context, int where, u8 *bVal);
-    int (*pci_read_config_word)(void *context, int where, u16 *wVal);
-    int (*pci_read_config_dword)(void *context, int where, u32 *dwVal);
+    int(*pci_read_config_byte)(void *context, int where, u8 *bVal);
+    int(*pci_read_config_word)(void *context, int where, u16 *wVal);
+    int(*pci_read_config_dword)(void *context, int where, u32 *dwVal);
 
     // PCI resource handling
-    size_t (*pci_get_resource_len)(void *context, int bar);
+    size_t(*pci_get_resource_len)(void *context, int bar);
     void *(*pci_map_address_range)(void *context, int bar, size_t offset, size_t maxlen);
 
     // misc
-    u16 (*vdev_get_msix_vector)(void *context, int queue);
-    void (*vdev_sleep)(void *context, unsigned int msecs);
+    u16(*vdev_get_msix_vector)(void *context, int queue);
+    void(*vdev_sleep)(void *context, unsigned int msecs);
 } VirtIOSystemOps;
 
 struct virtio_device;
@@ -201,36 +205,36 @@ typedef struct virtio_device VirtIODevice;
 struct virtio_device_ops
 {
     // read/write device config and read config generation counter
-    void (*get_config)(VirtIODevice *vdev, unsigned offset, void *buf, unsigned len);
-    void (*set_config)(VirtIODevice *vdev, unsigned offset, const void *buf, unsigned len);
-    u32 (*get_config_generation)(VirtIODevice *vdev);
+    void(*get_config)(VirtIODevice *vdev, unsigned offset, void *buf, unsigned len);
+    void(*set_config)(VirtIODevice *vdev, unsigned offset, const void *buf, unsigned len);
+    u32(*get_config_generation)(VirtIODevice *vdev);
 
     // read/write device status byte and reset the device
-    u8 (*get_status)(VirtIODevice *vdev);
-    void (*set_status)(VirtIODevice *vdev, u8 status);
-    void (*reset)(VirtIODevice *vdev);
+    u8(*get_status)(VirtIODevice *vdev);
+    void(*set_status)(VirtIODevice *vdev, u8 status);
+    void(*reset)(VirtIODevice *vdev);
 
     // get/set device feature bits
-    u64 (*get_features)(VirtIODevice *vdev);
-    NTSTATUS (*set_features)(VirtIODevice *vdev, u64 features);
+    u64(*get_features)(VirtIODevice *vdev);
+    NTSTATUS(*set_features)(VirtIODevice *vdev, u64 features);
 
     // set config/queue MSI interrupt vector, returns the new vector
-    u16 (*set_config_vector)(VirtIODevice *vdev, u16 vector);
-    u16 (*set_queue_vector)(struct virtqueue *vq, u16 vector);
+    u16(*set_config_vector)(VirtIODevice *vdev, u16 vector);
+    u16(*set_queue_vector)(struct virtqueue *vq, u16 vector);
 
     // query virtual queue size and memory requirements
-    NTSTATUS (*query_queue_alloc)(VirtIODevice *vdev,
-        unsigned index, unsigned short *pNumEntries,
-        unsigned long *pRingSize,
-        unsigned long *pHeapSize);
+    NTSTATUS(*query_queue_alloc)(VirtIODevice *vdev,
+                                 unsigned index, unsigned short *pNumEntries,
+                                 unsigned long *pRingSize,
+                                 unsigned long *pHeapSize);
 
     // allocate and initialize a queue
-    NTSTATUS (*setup_queue)(struct virtqueue **queue,
-        VirtIODevice *vdev, VirtIOQueueInfo *info,
-        unsigned idx, u16 msix_vec);
+    NTSTATUS(*setup_queue)(struct virtqueue **queue,
+                           VirtIODevice *vdev, VirtIOQueueInfo *info,
+                           unsigned idx, u16 msix_vec);
 
     // tear down and deallocate a queue
-    void (*delete_queue)(VirtIOQueueInfo *info);
+    void(*delete_queue)(VirtIOQueueInfo *info);
 };
 
 struct virtio_device
@@ -253,6 +257,7 @@ struct virtio_device
     // external callbacks implemented separately by different driver model drivers
     const struct virtio_system_ops *system;
 
+    // Ö¸Ïò virtio_wdf_driver
     // opaque context value passed as first argument to virtio_system_ops callbacks
     void *DeviceContext;
 
@@ -286,7 +291,7 @@ struct virtio_device
  */
 NTSTATUS virtio_device_initialize(VirtIODevice *vdev,
                                   const VirtIOSystemOps *pSystemOps,
-                                  void *DeviceContext,
+                                  PVOID DeviceContext,
                                   bool msix_used);
 void virtio_device_shutdown(VirtIODevice *vdev);
 

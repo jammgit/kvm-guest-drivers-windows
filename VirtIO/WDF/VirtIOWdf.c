@@ -38,9 +38,9 @@
 extern VirtIOSystemOps VirtIOWdfSystemOps;
 
 NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
-                             WDFDEVICE Device,
+                             WDFDEVICE Device,                      // BUS FDO
                              WDFCMRESLIST ResourcesTranslated,
-                             WDFINTERRUPT ConfigInterrupt,
+                             WDFINTERRUPT ConfigInterrupt,          // NULL
                              ULONG MemoryTag)
 {
     NTSTATUS status = STATUS_SUCCESS;
@@ -59,19 +59,22 @@ NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
         sizeof(pWdfDriver->PCIBus),
         1 /* version */,
         NULL);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
     /* register config interrupt */
     status = PCIRegisterInterrupt(ConfigInterrupt);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
     /* set up resources */
     status = PCIAllocBars(ResourcesTranslated, pWdfDriver);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
@@ -79,19 +82,22 @@ NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
     /* number of SG fragments is unlimited */
     WDF_DMA_ENABLER_CONFIG_INIT(&dmaEnablerConfig, WdfDmaProfileScatterGather64Duplex, 0xFFFFFFF);
     status = WdfDmaEnablerCreate(Device, &dmaEnablerConfig, WDF_NO_OBJECT_ATTRIBUTES, &pWdfDriver->DmaEnabler);
-    if (NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status))
+    {
         WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
         DPrintf(0, "%s DMA enabler ready (alignment %d), pWdfDriver %p\n", __FUNCTION__,
-            WdfDeviceGetAlignmentRequirement(Device) + 1, pWdfDriver);
+                WdfDeviceGetAlignmentRequirement(Device) + 1, pWdfDriver);
         attributes.ParentObject = Device;
         status = WdfCollectionCreate(&attributes, &pWdfDriver->MemoryBlockCollection);
     }
 
-    if (NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status))
+    {
         status = WdfSpinLockCreate(&attributes, &pWdfDriver->DmaSpinlock);
     }
 
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
@@ -101,7 +107,8 @@ NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
         &VirtIOWdfSystemOps,
         pWdfDriver,
         pWdfDriver->nMSIInterrupts > 0);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         PCIFreeBars(pWdfDriver);
     }
 
@@ -125,19 +132,23 @@ NTSTATUS VirtIOWdfSetDriverFeatures(PVIRTIO_WDF_DRIVER pWdfDriver,
     drvTag[sizeof(pWdfDriver->MemoryTag)] = 0;
     RtlCopyMemory(drvTag, &pWdfDriver->MemoryTag, sizeof(pWdfDriver->MemoryTag));
 
-    if (virtio_is_feature_enabled(uDeviceFeatures, VIRTIO_F_VERSION_1)) {
+    if (virtio_is_feature_enabled(uDeviceFeatures, VIRTIO_F_VERSION_1))
+    {
         virtio_feature_enable(uFeatures, VIRTIO_F_VERSION_1);
     }
-    if (virtio_is_feature_enabled(uDeviceFeatures, VIRTIO_F_ANY_LAYOUT)) {
+    if (virtio_is_feature_enabled(uDeviceFeatures, VIRTIO_F_ANY_LAYOUT))
+    {
         virtio_feature_enable(uFeatures, VIRTIO_F_ANY_LAYOUT);
     }
-    if (virtio_is_feature_enabled(uDeviceFeatures, VIRTIO_F_ACCESS_PLATFORM)) {
+    if (virtio_is_feature_enabled(uDeviceFeatures, VIRTIO_F_ACCESS_PLATFORM))
+    {
         virtio_feature_enable(uFeatures, VIRTIO_F_ACCESS_PLATFORM);
     }
 
-    if ((uDeviceFeatures & uPrivateFeaturesOn) != uPrivateFeaturesOn) {
+    if ((uDeviceFeatures & uPrivateFeaturesOn) != uPrivateFeaturesOn)
+    {
         DPrintf(0, "%s(%s) FAILED features %I64X != %I64X\n", __FUNCTION__,
-            drvTag, uPrivateFeaturesOn, (uDeviceFeatures & uPrivateFeaturesOn));
+                drvTag, uPrivateFeaturesOn, (uDeviceFeatures & uPrivateFeaturesOn));
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -146,10 +157,12 @@ NTSTATUS VirtIOWdfSetDriverFeatures(PVIRTIO_WDF_DRIVER pWdfDriver,
 
     /* make sure that we always follow the status bit-setting protocol */
     u8 status = virtio_get_status(&pWdfDriver->VIODevice);
-    if (!(status & VIRTIO_CONFIG_S_ACKNOWLEDGE)) {
+    if (!(status & VIRTIO_CONFIG_S_ACKNOWLEDGE))
+    {
         virtio_add_status(&pWdfDriver->VIODevice, VIRTIO_CONFIG_S_ACKNOWLEDGE);
     }
-    if (!(status & VIRTIO_CONFIG_S_DRIVER)) {
+    if (!(status & VIRTIO_CONFIG_S_DRIVER))
+    {
         virtio_add_status(&pWdfDriver->VIODevice, VIRTIO_CONFIG_S_DRIVER);
     }
 
@@ -162,22 +175,27 @@ static NTSTATUS VirtIOWdfFinalizeFeatures(PVIRTIO_WDF_DRIVER pWdfDriver)
 {
     NTSTATUS status = STATUS_SUCCESS;
 
-    if (!pWdfDriver->uFeatures) {
+    if (!pWdfDriver->uFeatures)
+    {
         /* specific driver does not have any special features requirements */
         status = VirtIOWdfSetDriverFeatures(pWdfDriver, 0, 0);
     }
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
     u8 dev_status = virtio_get_status(&pWdfDriver->VIODevice);
-    if (!(dev_status & VIRTIO_CONFIG_S_ACKNOWLEDGE)) {
+    if (!(dev_status & VIRTIO_CONFIG_S_ACKNOWLEDGE))
+    {
         virtio_add_status(&pWdfDriver->VIODevice, VIRTIO_CONFIG_S_ACKNOWLEDGE);
     }
-    if (!(dev_status & VIRTIO_CONFIG_S_DRIVER)) {
+    if (!(dev_status & VIRTIO_CONFIG_S_DRIVER))
+    {
         virtio_add_status(&pWdfDriver->VIODevice, VIRTIO_CONFIG_S_DRIVER);
     }
-    if (!(dev_status & VIRTIO_CONFIG_S_FEATURES_OK)) {
+    if (!(dev_status & VIRTIO_CONFIG_S_FEATURES_OK))
+    {
         status = virtio_set_features(&pWdfDriver->VIODevice, pWdfDriver->uFeatures);
     }
 
@@ -194,14 +212,17 @@ NTSTATUS VirtIOWdfInitQueues(PVIRTIO_WDF_DRIVER pWdfDriver,
 
     /* make sure that we always follow the status bit-setting protocol */
     status = VirtIOWdfFinalizeFeatures(pWdfDriver);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
     /* register queue interrupts */
-    for (i = 0; i < nQueues; i++) {
+    for (i = 0; i < nQueues; i++)
+    {
         status = PCIRegisterInterrupt(pQueueParams[i].Interrupt);
-        if (!NT_SUCCESS(status)) {
+        if (!NT_SUCCESS(status))
+        {
             return status;
         }
     }
@@ -230,28 +251,34 @@ NTSTATUS VirtIOWdfInitQueuesCB(PVIRTIO_WDF_DRIVER pWdfDriver,
 
     /* make sure that we always follow the status bit-setting protocol */
     status = VirtIOWdfFinalizeFeatures(pWdfDriver);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
     /* let VirtioLib know how many queues we'll need */
     status = virtio_reserve_queue_memory(&pWdfDriver->VIODevice, nQueues);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return status;
     }
 
     /* set up the device config vector */
     msix_vec = PCIGetMSIInterruptVector(pWdfDriver->ConfigInterrupt);
-    if (msix_vec != VIRTIO_MSI_NO_VECTOR) {
-        if (virtio_set_config_vector(&pWdfDriver->VIODevice, msix_vec) != msix_vec) {
+    if (msix_vec != VIRTIO_MSI_NO_VECTOR)
+    {
+        if (virtio_set_config_vector(&pWdfDriver->VIODevice, msix_vec) != msix_vec)
+        {
             return STATUS_DEVICE_BUSY;
         }
     }
 
     /* find and initialize queues */
-    for (i = 0; i < nQueues; i++) {
+    for (i = 0; i < nQueues; i++)
+    {
         status = virtio_find_queue(&pWdfDriver->VIODevice, i, &vq);
-        if (!NT_SUCCESS(status)) {
+        if (!NT_SUCCESS(status))
+        {
             break;
         }
 
@@ -261,13 +288,16 @@ NTSTATUS VirtIOWdfInitQueuesCB(PVIRTIO_WDF_DRIVER pWdfDriver,
         pQueueParamFunc(pWdfDriver, i, &QueueParam);
 
         status = PCIRegisterInterrupt(QueueParam.Interrupt);
-        if (!NT_SUCCESS(status)) {
+        if (!NT_SUCCESS(status))
+        {
             break;
         }
 
         msix_vec = PCIGetMSIInterruptVector(QueueParam.Interrupt);
-        if (msix_vec != VIRTIO_MSI_NO_VECTOR) {
-            if (virtio_set_queue_vector(vq, msix_vec) != msix_vec) {
+        if (msix_vec != VIRTIO_MSI_NO_VECTOR)
+        {
+            if (virtio_set_queue_vector(vq, msix_vec) != msix_vec)
+            {
                 status = STATUS_DEVICE_BUSY;
                 break;
             }
@@ -277,7 +307,8 @@ NTSTATUS VirtIOWdfInitQueuesCB(PVIRTIO_WDF_DRIVER pWdfDriver,
         pSetQueueFunc(pWdfDriver, i, vq);
     }
 
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         virtio_delete_queues(&pWdfDriver->VIODevice);
     }
     return status;

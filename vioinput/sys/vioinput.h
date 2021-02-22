@@ -96,28 +96,29 @@ typedef struct _tagInputClassCommon
 
 typedef struct _tagInputDevice
 {
-    VIRTIO_WDF_DRIVER      VDevice;
+    VIRTIO_WDF_DRIVER      VDevice;                     // pnp prepare 初始化
 
-    WDFINTERRUPT           QueuesInterrupt;
+    WDFINTERRUPT           QueuesInterrupt; // adddevice时创建中断
 
-    struct virtqueue       *EventQ;
-    struct virtqueue       *StatusQ;
+    struct virtqueue       *EventQ;                         // pnp entry 初始化
+    struct virtqueue       *StatusQ;                        // pnp entry 初始化
 
-    WDFSPINLOCK            EventQLock;
-    WDFSPINLOCK            StatusQLock;
+    WDFSPINLOCK            EventQLock;      // adddevice时初始化
+    WDFSPINLOCK            StatusQLock;     // adddevice时初始化
 
-    PVIRTIO_DMA_MEMORY_SLICED EventQMemBlock;
-    PVIRTIO_DMA_MEMORY_SLICED StatusQMemBlock;
 
-    WDFQUEUE               IoctlQueue;
-    WDFQUEUE               HidQueue;
+    PVIRTIO_DMA_MEMORY_SLICED EventQMemBlock;           // pnp prepare 创建
+    PVIRTIO_DMA_MEMORY_SLICED StatusQMemBlock;          // pnp prepare 创建
 
-    HID_DESCRIPTOR         HidDescriptor;
-    HID_DEVICE_ATTRIBUTES  HidDeviceAttributes;
-    PHID_REPORT_DESCRIPTOR HidReportDescriptor;
-    UINT64                 HidReportDescriptorHash;
+    WDFQUEUE               IoctlQueue;      // adddevice时创建
+    WDFQUEUE               HidQueue;        // adddevice时创建
 
-    BOOLEAN                bChildPdoCreated;
+    HID_DESCRIPTOR         HidDescriptor;               // pnp prepare创建子设备pdo
+    HID_DEVICE_ATTRIBUTES  HidDeviceAttributes;         //
+    PHID_REPORT_DESCRIPTOR HidReportDescriptor;         //
+    UINT64                 HidReportDescriptorHash;     //
+
+    BOOLEAN                bChildPdoCreated;            //
 
     // array of pointers to input class descriptors, each responsible
     // for one device class (e.g. mouse)

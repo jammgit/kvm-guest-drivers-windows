@@ -114,6 +114,7 @@ VIOInputEvtDeviceAdd(
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_PNP, "--> %s\n", __FUNCTION__);
 
+    // 注册PNP回调，用于创建子设备
     WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&PnpPowerCallbacks);
     PnpPowerCallbacks.EvtDevicePrepareHardware = VIOInputEvtDevicePrepareHardware;
     PnpPowerCallbacks.EvtDeviceReleaseHardware = VIOInputEvtDeviceReleaseHardware;
@@ -130,6 +131,7 @@ VIOInputEvtDeviceAdd(
         return status;
     }
 
+    // 注册中断、DPC回调
     status = VIOInputInitInterruptHandling(hDevice);
     if (!NT_SUCCESS(status))
     {
@@ -229,7 +231,7 @@ static void VIOInputFreeMemBlocks(PINPUT_DEVICE pContext)
 
 NTSTATUS
 VIOInputEvtDevicePrepareHardware(
-    IN WDFDEVICE Device,
+    IN WDFDEVICE Device,                // BUS FDO 设备对象
     IN WDFCMRESLIST ResourcesRaw,
     IN WDFCMRESLIST ResourcesTranslated)
 {
@@ -280,6 +282,7 @@ VIOInputEvtDevicePrepareHardware(
         // input device is plugged into the same PCI slot.
         // viohidkmdf.sys (build by the hidpassthrough project) is
         // the FDO for the child, passing IOCTL IRPs back to us.
+        //
         status = VIOInputCreateChildPdo(Device);
         if (NT_SUCCESS(status))
         {
@@ -564,7 +567,7 @@ VIOInputAddOutBuf(
 
 NTSTATUS
 VIOInputEvtDeviceD0Entry(
-    IN  WDFDEVICE Device,
+    IN  WDFDEVICE Device,           // BUS FDO
     IN  WDF_POWER_DEVICE_STATE PreviousState)
 {
     NTSTATUS status = STATUS_SUCCESS;

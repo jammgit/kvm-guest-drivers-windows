@@ -34,23 +34,25 @@
 #include <wdf.h>
 #include "virtio_pci.h"
 
-/* Configures a virtqueue, see VirtIOWdfInitQueues. */
-typedef struct virtio_wdf_queue_param {
+ /* Configures a virtqueue, see VirtIOWdfInitQueues. */
+typedef struct virtio_wdf_queue_param
+{
     /* interrupt associated with the queue */
     WDFINTERRUPT            Interrupt;
-} VIRTIO_WDF_QUEUE_PARAM , *PVIRTIO_WDF_QUEUE_PARAM;
+} VIRTIO_WDF_QUEUE_PARAM, *PVIRTIO_WDF_QUEUE_PARAM;
 
 /* Data associated with a WDF virtio driver, usually declared as
  * a field in the driver's context structure and treated opaque.
  */
-typedef struct virtio_wdf_driver {
+typedef struct virtio_wdf_driver
+{
     VirtIODevice            VIODevice;
 
     ULONG                   MemoryTag;
     ULONGLONG               uFeatures;
 
     BUS_INTERFACE_STANDARD  PCIBus;
-    SINGLE_LIST_ENTRY       PCIBars;
+    SINGLE_LIST_ENTRY       PCIBars;            // I/O or memory resource list
 
     ULONG                   nInterrupts;
     ULONG                   nMSIInterrupts;
@@ -62,16 +64,15 @@ typedef struct virtio_wdf_driver {
     WDFCOLLECTION           MemoryBlockCollection;
     WDFSPINLOCK             DmaSpinlock;
     BOOLEAN                 bLegacyMode;
-    
 } VIRTIO_WDF_DRIVER, *PVIRTIO_WDF_DRIVER;
 
 /* Queue discovery callbacks used by VirtIOWdfInitQueuesCB. */
-typedef void (*VirtIOWdfGetQueueParamCallback)(PVIRTIO_WDF_DRIVER pWdfDriver,
-                                               ULONG uQueueIndex,
-                                               PVIRTIO_WDF_QUEUE_PARAM pQueueParam);
-typedef void (*VirtIOWdfSetQueueCallback)(PVIRTIO_WDF_DRIVER pWdfDriver,
-                                          ULONG uQueueIndex,
-                                          struct virtqueue *pQueue);
+typedef void(*VirtIOWdfGetQueueParamCallback)(PVIRTIO_WDF_DRIVER pWdfDriver,
+                                              ULONG uQueueIndex,
+                                              PVIRTIO_WDF_QUEUE_PARAM pQueueParam);
+typedef void(*VirtIOWdfSetQueueCallback)(PVIRTIO_WDF_DRIVER pWdfDriver,
+                                         ULONG uQueueIndex,
+                                         struct virtqueue *pQueue);
 
 /* Initializes the VIRTIO_WDF_DRIVER context, called from driver's
  * EvtDevicePrepareHardware callback.
@@ -178,7 +179,7 @@ typedef struct virtio_dma_transaction_params
     PSCATTER_GATHER_LIST sgList;
 } VIRTIO_DMA_TRANSACTION_PARAMS, *PVIRTIO_DMA_TRANSACTION_PARAMS;
 
-typedef BOOLEAN (*VirtIOWdfDmaTransactionCallback)(PVIRTIO_DMA_TRANSACTION_PARAMS);
+typedef BOOLEAN(*VirtIOWdfDmaTransactionCallback)(PVIRTIO_DMA_TRANSACTION_PARAMS);
 
 /* if VirtIOWdfDeviceDmaTxAsync returns FALSE, the callback was not and will not be called
  * The callback will be called synchronously or asynchronously, so do not call this
@@ -196,16 +197,16 @@ typedef BOOLEAN (*VirtIOWdfDmaTransactionCallback)(PVIRTIO_DMA_TRANSACTION_PARAM
  * IRQL: <= DISPATCH, callback is called on DISPATCH
  */
 BOOLEAN VirtIOWdfDeviceDmaTxAsync(VirtIODevice *vdev,
-                                 PVIRTIO_DMA_TRANSACTION_PARAMS params,
-                                 VirtIOWdfDmaTransactionCallback);
+                                  PVIRTIO_DMA_TRANSACTION_PARAMS params,
+                                  VirtIOWdfDmaTransactionCallback);
 /* <= DISPATCH transaction = VIRTIO_DMA_TRANSACTION_PARAMS.transaction */
 void VirtIOWdfDeviceDmaTxComplete(VirtIODevice *vdev, WDFDMATRANSACTION transaction);
 
 typedef struct virtio_dma_memory_sliced
 {
-    PVOID                (*get_slice)(struct virtio_dma_memory_sliced *, PHYSICAL_ADDRESS *ppa);
-    void                 (*return_slice)(struct virtio_dma_memory_sliced *, PVOID va);
-    void                 (*destroy)(struct virtio_dma_memory_sliced *);
+    PVOID(*get_slice)(struct virtio_dma_memory_sliced *, PHYSICAL_ADDRESS *ppa);
+    void(*return_slice)(struct virtio_dma_memory_sliced *, PVOID va);
+    void(*destroy)(struct virtio_dma_memory_sliced *);
     /* private area */
     PHYSICAL_ADDRESS     pa;
     PVIRTIO_WDF_DRIVER   drv;

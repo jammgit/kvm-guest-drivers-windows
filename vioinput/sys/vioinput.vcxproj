@@ -50,6 +50,7 @@
   <PropertyGroup Label="Globals">
     <RootNamespace>vioinput</RootNamespace>
     <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VisualStudioVersion)' == '11.0'">$(VCTargetsPath11)</VCTargetsPath>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
