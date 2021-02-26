@@ -106,15 +106,14 @@ typedef struct _tagInputDevice
     WDFSPINLOCK            EventQLock;      // adddevice时初始化
     WDFSPINLOCK            StatusQLock;     // adddevice时初始化
 
-
-    PVIRTIO_DMA_MEMORY_SLICED EventQMemBlock;           // pnp prepare 创建
-    PVIRTIO_DMA_MEMORY_SLICED StatusQMemBlock;          // pnp prepare 创建
+    PVIRTIO_DMA_MEMORY_SLICED EventQMemBlock;           // pnp prepare 创建 from VIRTIO_WDF_DRIVER::MemoryBlockCollection
+    PVIRTIO_DMA_MEMORY_SLICED StatusQMemBlock;          // pnp prepare 创建 from VIRTIO_WDF_DRIVER::MemoryBlockCollection
 
     WDFQUEUE               IoctlQueue;      // adddevice时创建
     WDFQUEUE               HidQueue;        // adddevice时创建
 
     HID_DESCRIPTOR         HidDescriptor;               // pnp prepare创建子设备pdo
-    HID_DEVICE_ATTRIBUTES  HidDeviceAttributes;         //
+    HID_DEVICE_ATTRIBUTES  HidDeviceAttributes;         //      VID/PID
     PHID_REPORT_DESCRIPTOR HidReportDescriptor;         //
     UINT64                 HidReportDescriptorHash;     //
 

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Public VirtioLib-WDF prototypes (driver API)
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -51,8 +51,8 @@ typedef struct virtio_wdf_driver
     ULONG                   MemoryTag;
     ULONGLONG               uFeatures;
 
-    BUS_INTERFACE_STANDARD  PCIBus;
-    SINGLE_LIST_ENTRY       PCIBars;            // I/O or memory resource list
+    BUS_INTERFACE_STANDARD  PCIBus;             // 通过 GUID_BUS_INTERFACE_STANDARD 获取
+    SINGLE_LIST_ENTRY       PCIBars;            // 系统根据硬件PCI配置空间，转译过来的硬件资源链表
 
     ULONG                   nInterrupts;
     ULONG                   nMSIInterrupts;
@@ -204,9 +204,9 @@ void VirtIOWdfDeviceDmaTxComplete(VirtIODevice *vdev, WDFDMATRANSACTION transact
 
 typedef struct virtio_dma_memory_sliced
 {
-    PVOID(*get_slice)(struct virtio_dma_memory_sliced *, PHYSICAL_ADDRESS *ppa);
-    void(*return_slice)(struct virtio_dma_memory_sliced *, PVOID va);
-    void(*destroy)(struct virtio_dma_memory_sliced *);
+    PVOID(*get_slice)(struct virtio_dma_memory_sliced *, PHYSICAL_ADDRESS *ppa);        // 获取一个item内存
+    void(*return_slice)(struct virtio_dma_memory_sliced *, PVOID va);                   // 释放一个item内存
+    void(*destroy)(struct virtio_dma_memory_sliced *);                                  // 释放common buffer
     /* private area */
     PHYSICAL_ADDRESS     pa;
     PVIRTIO_WDF_DRIVER   drv;

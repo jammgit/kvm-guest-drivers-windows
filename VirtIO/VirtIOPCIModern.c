@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Virtio PCI driver - modern (virtio 1.0) device support
  *
  * Copyright IBM Corp. 2007
@@ -584,6 +584,7 @@ NTSTATUS vio_modern_initialize(VirtIODevice *vdev)
         return STATUS_INVALID_PARAMETER;
     }
 
+    // 获取PCI能力, 映射内存（在解析内核读取PCI转译的资源时还没有进行map memory）
     /* Map bars according to the capabilities */
     vdev->common = vio_modern_map_simple_capability(vdev,
                                                     capabilities[VIRTIO_PCI_CAP_COMMON_CFG],

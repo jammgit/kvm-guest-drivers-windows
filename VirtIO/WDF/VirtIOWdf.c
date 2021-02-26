@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Implementation of VirtioLib-WDF driver API
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -71,6 +71,7 @@ NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
         return status;
     }
 
+    // 读取PCI配置空间，解析硬件资源
     /* set up resources */
     status = PCIAllocBars(ResourcesTranslated, pWdfDriver);
     if (!NT_SUCCESS(status))

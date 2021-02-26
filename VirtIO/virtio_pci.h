@@ -1,4 +1,4 @@
-/*
+﻿/*
 * Virtio PCI driver
 *
 * This module allows virtio devices to be used over a virtual PCI device.
@@ -251,13 +251,15 @@ struct virtio_device
     // true if the VIRTIO_F_RING_PACKED feature flag has been negotiated
     bool packed_ring;
 
+    // 全局变量 virtio_pci_device_ops
     // internal device operations, implemented separately for legacy and modern
     const struct virtio_device_ops *device;
 
+    // 指向全局变量 VirtIOWdfSystemOps
     // external callbacks implemented separately by different driver model drivers
     const struct virtio_system_ops *system;
 
-    // ָ�� virtio_wdf_driver
+    // 指向上层 virtio_wdf_driver
     // opaque context value passed as first argument to virtio_system_ops callbacks
     void *DeviceContext;
 

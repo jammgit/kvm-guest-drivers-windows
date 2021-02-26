@@ -255,6 +255,7 @@ VIOInputEvtDevicePrepareHardware(
         return status;
     }
 
+    // 总大小PAGE_SIZE,每个元素sizeof(VIRTIO_INPUT_EVENT)
     pContext->EventQMemBlock = VirtIOWdfDeviceAllocDmaMemorySliced(
         &pContext->VDevice.VIODevice, PAGE_SIZE, sizeof(VIRTIO_INPUT_EVENT));
     pContext->StatusQMemBlock = VirtIOWdfDeviceAllocDmaMemorySliced(

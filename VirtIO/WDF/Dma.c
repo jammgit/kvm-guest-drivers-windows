@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Implementation of virtio_system_ops VirtioLib callbacks
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -45,17 +45,20 @@ static void *AllocateCommonBuffer(PVIRTIO_WDF_DRIVER pWdfDriver, size_t size, UL
     WDF_OBJECT_ATTRIBUTES attr;
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attr, VIRTIO_WDF_MEMORY_BLOCK_CONTEXT);
 
-    if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+    if (KeGetCurrentIrql() > PASSIVE_LEVEL)
+    {
         DPrintf(0, "%s FAILED(irql)\n", __FUNCTION__);
         return NULL;
     }
     status = WdfCommonBufferCreate(pWdfDriver->DmaEnabler, size, &attr, &commonBuffer);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         return NULL;
     }
     WdfSpinLockAcquire(pWdfDriver->DmaSpinlock);
     status = WdfCollectionAdd(pWdfDriver->MemoryBlockCollection, commonBuffer);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         WdfObjectDelete(commonBuffer);
         WdfSpinLockRelease(pWdfDriver->DmaSpinlock);
         return NULL;
@@ -71,10 +74,10 @@ static void *AllocateCommonBuffer(PVIRTIO_WDF_DRIVER pWdfDriver, size_t size, UL
     RtlZeroMemory(context->pVirtualAddress, size);
 
     DPrintf(1, "%s done %p@%I64x(tag %08X), size 0x%x\n", __FUNCTION__,
-        context->pVirtualAddress,
-        context->PhysicalAddress.QuadPart,
-        context->groupTag,
-        (ULONG)size);
+            context->pVirtualAddress,
+            context->PhysicalAddress.QuadPart,
+            context->groupTag,
+            (ULONG)size);
 
     return context->pVirtualAddress;
 }
@@ -97,23 +100,29 @@ static BOOLEAN FindCommonBuffer(
     WDFOBJECT obj = NULL;
     WdfSpinLockAcquire(pWdfDriver->DmaSpinlock);
     n = WdfCollectionGetCount(pWdfDriver->MemoryBlockCollection);
-    for (i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i)
+    {
         obj = WdfCollectionGetItem(pWdfDriver->MemoryBlockCollection, i);
-        if (!obj) {
+        if (!obj)
+        {
             break;
         }
         PVIRTIO_WDF_MEMORY_BLOCK_CONTEXT context = GetMemoryBlockContext(obj);
-        if (context->bToBeDeleted && !bRemoval) {
+        if (context->bToBeDeleted && !bRemoval)
+        {
             continue;
         }
         ULONG_PTR currentVaStart = (ULONG_PTR)context->pVirtualAddress;
-        if (va >= currentVaStart && va < (currentVaStart + context->Length)) {
+        if (va >= currentVaStart && va < (currentVaStart + context->Length))
+        {
             *ppa = context->PhysicalAddress;
             *pOffset = va - currentVaStart;
             b = TRUE;
-            if (bRemoval) {
+            if (bRemoval)
+            {
                 b = *pOffset == 0;
-                if (b) {
+                if (b)
+                {
                     context->bToBeDeleted = TRUE;
                 }
             }
@@ -121,12 +130,14 @@ static BOOLEAN FindCommonBuffer(
         }
     }
     WdfSpinLockRelease(pWdfDriver->DmaSpinlock);
-    if (!b) {
+    if (!b)
+    {
         DPrintf(0, "%s(%s) FAILED!\n", __FUNCTION__, bRemoval ? "Remove" : "Locate");
     }
-    else if (bRemoval) {
-        if (KeGetCurrentIrql() == PASSIVE_LEVEL) {
-
+    else if (bRemoval)
+    {
+        if (KeGetCurrentIrql() == PASSIVE_LEVEL)
+        {
             WdfSpinLockAcquire(pWdfDriver->DmaSpinlock);
             WdfCollectionRemove(pWdfDriver->MemoryBlockCollection, obj);
             WdfSpinLockRelease(pWdfDriver->DmaSpinlock);
@@ -134,7 +145,8 @@ static BOOLEAN FindCommonBuffer(
             WdfObjectDelete(obj);
             DPrintf(1, "%s %p freed (%d common buffers)\n", __FUNCTION__, va, n - 1);
         }
-        else {
+        else
+        {
             DPrintf(0, "%s %p marked for deletion\n", __FUNCTION__, va);
         }
     }
@@ -146,7 +158,8 @@ static PHYSICAL_ADDRESS GetPhysicalAddress(PVIRTIO_WDF_DRIVER pWdfDriver, PVOID 
     PHYSICAL_ADDRESS pa;
     size_t offset;
     pa.QuadPart = 0;
-    if (FindCommonBuffer(pWdfDriver, va, &pa, &offset, FALSE)) {
+    if (FindCommonBuffer(pWdfDriver, va, &pa, &offset, FALSE))
+    {
         pa.QuadPart += offset;
     }
     return pa;
@@ -175,21 +188,25 @@ static BOOLEAN FindCommonBufferByTag(
     PVIRTIO_WDF_MEMORY_BLOCK_CONTEXT context = NULL;
     WdfSpinLockAcquire(pWdfDriver->DmaSpinlock);
     n = WdfCollectionGetCount(pWdfDriver->MemoryBlockCollection);
-    for (i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i)
+    {
         obj = WdfCollectionGetItem(pWdfDriver->MemoryBlockCollection, i);
-        if (!obj) {
+        if (!obj)
+        {
             break;
         }
         context = GetMemoryBlockContext(obj);
-        if (context->groupTag == tag) {
+        if (context->groupTag == tag)
+        {
             b = TRUE;
             break;
         }
     }
     WdfSpinLockRelease(pWdfDriver->DmaSpinlock);
-    if (b) {
+    if (b)
+    {
         DPrintf(1, "%s %p (tag %08X) freed (%d common buffers)\n", __FUNCTION__,
-            context->pVirtualAddress, tag, n - 1);
+                context->pVirtualAddress, tag, n - 1);
         WdfSpinLockAcquire(pWdfDriver->DmaSpinlock);
         WdfCollectionRemove(pWdfDriver->MemoryBlockCollection, obj);
         WdfSpinLockRelease(pWdfDriver->DmaSpinlock);
@@ -200,15 +217,18 @@ static BOOLEAN FindCommonBufferByTag(
 
 void VirtIOWdfDeviceFreeDmaMemoryByTag(VirtIODevice *vdev, ULONG groupTag)
 {
-    if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+    if (KeGetCurrentIrql() > PASSIVE_LEVEL)
+    {
         DPrintf(0, "%s FAILED(irql)\n", __FUNCTION__);
         return;
     }
-    if (!groupTag) {
+    if (!groupTag)
+    {
         DPrintf(0, "%s FAILED(default tag)\n", __FUNCTION__);
         return;
     }
-    if (!vdev->DeviceContext) {
+    if (!vdev->DeviceContext)
+    {
         DPrintf(0, "%s was not initialized\n", __FUNCTION__);
         return;
     }
@@ -225,7 +245,8 @@ static void FreeSlicedBlock(PVIRTIO_DMA_MEMORY_SLICED p)
 static PVOID AllocateSlice(PVIRTIO_DMA_MEMORY_SLICED p, PHYSICAL_ADDRESS *ppa)
 {
     ULONG offset, index = RtlFindClearBitsAndSet(&p->bitmap, 1, 0);
-    if (index >= p->bitmap.SizeOfBitMap) {
+    if (index >= p->bitmap.SizeOfBitMap)
+    {
         return NULL;
     }
     offset = p->slice * index;
@@ -237,17 +258,20 @@ static void FreeSlice(PVIRTIO_DMA_MEMORY_SLICED p, PVOID va)
 {
     PHYSICAL_ADDRESS pa;
     size_t offset;
-    if (!FindCommonBuffer(p->drv, va, &pa, &offset, FALSE)) {
+    if (!FindCommonBuffer(p->drv, va, &pa, &offset, FALSE))
+    {
         DPrintf(0, "%s: block with va %p not found\n", __FUNCTION__, va);
         return;
     }
-    if (offset % p->slice) {
+    if (offset % p->slice)
+    {
         DPrintf(0, "%s: offset %d is wrong for slice %d\n", __FUNCTION__,
             (ULONG)offset, p->slice);
         return;
     }
     ULONG index = (ULONG)(offset / p->slice);
-    if (!RtlTestBit(&p->bitmap, index)) {
+    if (!RtlTestBit(&p->bitmap, index))
+    {
         DPrintf(0, "%s: bit %d is NOT set\n", __FUNCTION__, index);
         return;
     }
@@ -262,22 +286,24 @@ PVIRTIO_DMA_MEMORY_SLICED VirtIOWdfDeviceAllocDmaMemorySliced(
     PVIRTIO_WDF_DRIVER pWdfDriver = vdev->DeviceContext;
     size_t allocSize = sizeof(VIRTIO_DMA_MEMORY_SLICED) + (blockSize / sliceSize) / 8 + sizeof(ULONG);
     PVIRTIO_DMA_MEMORY_SLICED p = ExAllocatePoolWithTag(NonPagedPool, allocSize, pWdfDriver->MemoryTag);
-    if (!p) {
+    if (!p)
+    {
         return NULL;
     }
     RtlZeroMemory(p, sizeof(*p));
     p->va = AllocateCommonBuffer(pWdfDriver, blockSize, 0);
     p->pa = GetPhysicalAddress(pWdfDriver, p->va);
-    if (!p->va || !p->pa.QuadPart) {
+    if (!p->va || !p->pa.QuadPart)
+    {
         ExFreePoolWithTag(p, pWdfDriver->MemoryTag);
         return NULL;
     }
     p->slice = sliceSize;
     p->drv = pWdfDriver;
     RtlInitializeBitMap(&p->bitmap, p->bitmap_buffer, (ULONG)blockSize / sliceSize);
-    p->return_slice = FreeSlice;
-    p->get_slice = AllocateSlice;
-    p->destroy   = FreeSlicedBlock;
+    p->return_slice = FreeSlice;        // 释放common buffer
+    p->get_slice = AllocateSlice;       // 获取一个item内存
+    p->destroy = FreeSlicedBlock;     // 释放一个item内存
     return p;
 }
 
@@ -285,10 +311,12 @@ VOID OnDmaTransactionDestroy(WDFOBJECT Object)
 {
     PVIRTIO_WDF_DMA_TRANSACTION_CONTEXT ctx = GetDmaTransactionContext(Object);
     DPrintf(1, "%s %p\n", __FUNCTION__, Object);
-    if (ctx->mdl) {
+    if (ctx->mdl)
+    {
         IoFreeMdl(ctx->mdl);
     }
-    if (ctx->buffer) {
+    if (ctx->buffer)
+    {
         ExFreePoolWithTag(ctx->buffer, ctx->parameters.allocationTag);
     }
 }
@@ -300,7 +328,8 @@ static FORCEINLINE void RefTransaction(PVIRTIO_WDF_DMA_TRANSACTION_CONTEXT ctx)
 
 static FORCEINLINE void DerefTransaction(PVIRTIO_WDF_DMA_TRANSACTION_CONTEXT ctx)
 {
-    if (!InterlockedDecrement(&ctx->refCount)) {
+    if (!InterlockedDecrement(&ctx->refCount))
+    {
         WdfObjectDelete(ctx->parameters.transaction);
     }
 }
@@ -318,8 +347,8 @@ BOOLEAN OnDmaTransactionProgramDma(
     ctx->parameters.transaction = Transaction;
     ctx->parameters.sgList = SgList;
     DPrintf(1, "-->%s %p %d frags\n", __FUNCTION__,
-        Transaction,
-        SgList->NumberOfElements);
+            Transaction,
+            SgList->NumberOfElements);
     BOOLEAN bFailed = !ctx->callback(&ctx->parameters);
     DPrintf(1, "<--%s %s\n", __FUNCTION__, bFailed ? "Failed" : "OK");
     DerefTransaction(ctx);
@@ -327,8 +356,8 @@ BOOLEAN OnDmaTransactionProgramDma(
 }
 
 BOOLEAN VirtIOWdfDeviceDmaTxAsync(VirtIODevice *vdev,
-    PVIRTIO_DMA_TRANSACTION_PARAMS params,
-    VirtIOWdfDmaTransactionCallback callback)
+                                  PVIRTIO_DMA_TRANSACTION_PARAMS params,
+                                  VirtIOWdfDmaTransactionCallback callback)
 {
     PVIRTIO_WDF_DRIVER pWdfDriver = vdev->DeviceContext;
     WDFDMATRANSACTION tr;
@@ -337,7 +366,8 @@ BOOLEAN VirtIOWdfDeviceDmaTxAsync(VirtIODevice *vdev,
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attr, VIRTIO_WDF_DMA_TRANSACTION_CONTEXT);
     attr.EvtDestroyCallback = OnDmaTransactionDestroy;
     status = WdfDmaTransactionCreate(pWdfDriver->DmaEnabler, &attr, &tr);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         DPrintf(0, "%s FAILED(create) %X\n", __FUNCTION__, status);
         return FALSE;
     }
@@ -346,33 +376,42 @@ BOOLEAN VirtIOWdfDeviceDmaTxAsync(VirtIODevice *vdev,
     ctx->parameters = *params;
     ctx->callback = callback;
     ctx->refCount = 1;
-    if (params->req) {
+    if (params->req)
+    {
         status = WdfDmaTransactionInitializeUsingRequest(
             tr, params->req, OnDmaTransactionProgramDma, WdfDmaDirectionWriteToDevice);
-    } else {
+    }
+    else
+    {
         ctx->buffer = ExAllocatePoolWithTag(NonPagedPool, ctx->parameters.size, ctx->parameters.allocationTag);
-        if (ctx->buffer) {
+        if (ctx->buffer)
+        {
             RtlCopyMemory(ctx->buffer, params->buffer, params->size);
             ctx->mdl = IoAllocateMdl(ctx->buffer, params->size, FALSE, FALSE, NULL);
         }
-        if (ctx->mdl) {
+        if (ctx->mdl)
+        {
             MmBuildMdlForNonPagedPool(ctx->mdl);
             status = WdfDmaTransactionInitialize(
                 tr, OnDmaTransactionProgramDma, WdfDmaDirectionWriteToDevice,
                 ctx->mdl, ctx->buffer, params->size);
-        } else {
+        }
+        else
+        {
             status = STATUS_INSUFFICIENT_RESOURCES;
         }
     }
 
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         DPrintf(0, "%s FAILED(init) %X\n", __FUNCTION__, status);
         WdfObjectDelete(tr);
         return FALSE;
     }
 
     status = WdfDmaTransactionExecute(tr, NULL);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         DPrintf(0, "%s FAILED(execution) %X\n", __FUNCTION__, status);
         WdfObjectDelete(tr);
         return FALSE;
