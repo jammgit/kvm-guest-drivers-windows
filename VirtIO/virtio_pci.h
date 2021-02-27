@@ -120,7 +120,10 @@ struct virtio_pci_cap
     __u8 bar;           /* Where to find it. */
     __u8 padding[3];    /* Pad to full dword. */
     __le32 offset;      /* Offset within bar. */
+                        // body 偏移
+
     __le32 length;      /* Length of the structure, in bytes. */
+                        // 描述 virtio_pci_cap 和 body（如struct virtio_pci_common_cfg）加起来的长度
 };
 
 struct virtio_pci_notify_cap
@@ -239,6 +242,7 @@ struct virtio_device_ops
 
 struct virtio_device
 {
+    // 过时PCI才使用
     // the I/O port BAR of the PCI device (legacy virtio devices only)
     ULONG_PTR addr;
 
@@ -263,9 +267,11 @@ struct virtio_device
     // opaque context value passed as first argument to virtio_system_ops callbacks
     void *DeviceContext;
 
+    // isr 是PCI的 VIRTIO_PCI_CAP_ISR_CFG偏移 映射出来可访问的虚拟地址
     // the ISR status field, reading causes the device to de-assert an interrupt
     volatile u8 *isr;
 
+    // common 是PCI的 VIRTIO_PCI_CAP_COMMON_CFG偏移 映射出来可访问的虚拟地址
     // modern virtio device capabilities and related state
     volatile struct virtio_pci_common_cfg *common;
     volatile unsigned char *config;

@@ -71,7 +71,7 @@ NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
         return status;
     }
 
-    // 读取PCI配置空间，解析硬件资源
+    // 读取PCI配置空间，和解析系统转译的硬件资源
     /* set up resources */
     status = PCIAllocBars(ResourcesTranslated, pWdfDriver);
     if (!NT_SUCCESS(status))

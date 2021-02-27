@@ -54,8 +54,8 @@ typedef struct virtio_wdf_driver
     BUS_INTERFACE_STANDARD  PCIBus;             // 通过 GUID_BUS_INTERFACE_STANDARD 获取
     SINGLE_LIST_ENTRY       PCIBars;            // 系统根据硬件PCI配置空间，转译过来的硬件资源链表
 
-    ULONG                   nInterrupts;
-    ULONG                   nMSIInterrupts;
+    ULONG                   nInterrupts;        //
+    ULONG                   nMSIInterrupts;     // message-signaled interrupt 个数
 
     WDFINTERRUPT            ConfigInterrupt;
     PVIRTIO_WDF_QUEUE_PARAM pQueueParams;

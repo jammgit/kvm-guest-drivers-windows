@@ -149,6 +149,7 @@ static int pci_read_config_dword(void *context, int where, u32 *dwVal)
 
 static PVIRTIO_WDF_BAR find_bar(void *context, int bar)
 {
+    // PCIBars 是通过 Windows转译的CMLIST 生成的，
     PVIRTIO_WDF_DRIVER pWdfDriver = (PVIRTIO_WDF_DRIVER)context;
     PSINGLE_LIST_ENTRY iter = &pWdfDriver->PCIBars;
 
@@ -245,7 +246,7 @@ extern u16 ReadVirtIODeviceWord(ULONG_PTR ulRegister);
 extern void WriteVirtIODeviceWord(ULONG_PTR ulRegister, u16 bValue);
 
 VirtIOSystemOps VirtIOWdfSystemOps = {
-    .vdev_read_byte = ReadVirtIODeviceByte,         // 读写端口、寄存器函数
+    .vdev_read_byte = ReadVirtIODeviceByte,         // 读写端口、寄存器函数，通过HAL函数
     .vdev_read_word = ReadVirtIODeviceWord,
     .vdev_read_dword = ReadVirtIODeviceRegister,
     .vdev_write_byte = WriteVirtIODeviceByte,
@@ -256,7 +257,7 @@ VirtIOSystemOps VirtIOWdfSystemOps = {
     .mem_get_physical_address = mem_get_physical_address,
     .mem_alloc_nonpaged_block = mem_alloc_nonpaged_block,
     .mem_free_nonpaged_block = mem_free_nonpaged_block,
-    .pci_read_config_byte = pci_read_config_byte,           // PCI配置读取函数
+    .pci_read_config_byte = pci_read_config_byte,           // PCI配置读取函数, 通过pWdfDriver->PCIBus.GetBusData
     .pci_read_config_word = pci_read_config_word,
     .pci_read_config_dword = pci_read_config_dword,
     .pci_get_resource_len = pci_get_resource_len,

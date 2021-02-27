@@ -79,6 +79,10 @@ VIOInputInitInterruptHandling(
     interruptConfig.EvtInterruptEnable = VIOInputInterruptEnable;
     interruptConfig.EvtInterruptDisable = VIOInputInterruptDisable;
 
+    // WDF框架在PNP分配资源前可分配中断对象，在PNP分配了系统资源后；
+    // WDF框架再将资源自动存储在设备的中断对象.
+    //
+    // 也可以在prepre hardware回调中才创建中断对象
     status = WdfInterruptCreate(hDevice, &interruptConfig, WDF_NO_OBJECT_ATTRIBUTES,
                                 &pContext->QueuesInterrupt);
 
@@ -116,6 +120,7 @@ VIOInputEvtDeviceAdd(
 
     // 注册PNP回调，用于创建子设备
     WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&PnpPowerCallbacks);
+    // prepare 回调的时候，系统已准备好转译的系统资源（IO/内存/中断/DMA等）
     PnpPowerCallbacks.EvtDevicePrepareHardware = VIOInputEvtDevicePrepareHardware;
     PnpPowerCallbacks.EvtDeviceReleaseHardware = VIOInputEvtDeviceReleaseHardware;
     PnpPowerCallbacks.EvtDeviceD0Entry = VIOInputEvtDeviceD0Entry;

@@ -46,18 +46,26 @@
 #include "VirtIOPCIModern.tmh"
 #endif
 
-static void *vio_modern_map_capability(VirtIODevice *vdev, int cap_offset,
-                                       size_t minlen, u32 alignment,
-                                       u32 start, u32 size, size_t *len)
+static void *vio_modern_map_capability(VirtIODevice *vdev,
+                                       int cap_offset,  // Capabilities Pointer
+                                       size_t minlen,   // sizeof(struct virtio_cap_common_cfg)
+                                       u32 alignment,
+                                       u32 start,       // 0
+                                       u32 size,        // sizeof(struct virtio_cap_common_cfg)
+                                       size_t *len)
 {
     u8 bar;
     u32 bar_offset, bar_length;
     void *addr;
 
+    // bar 代表了一个索引
     pci_read_config_byte(vdev, cap_offset + offsetof(struct virtio_pci_cap, bar), &bar);
+    // 获取body偏移
     pci_read_config_dword(vdev, cap_offset + offsetof(struct virtio_pci_cap, offset), &bar_offset);
+    // 获取body长度
     pci_read_config_dword(vdev, cap_offset + offsetof(struct virtio_pci_cap, length), &bar_length);
 
+    // 请求的body长度 比 真实的大
     if (start + minlen > bar_length)
     {
         DPrintf(0, "bar %i cap is not large enough to map %zu bytes at offset %u\n", bar, minlen, start);
@@ -83,12 +91,18 @@ static void *vio_modern_map_capability(VirtIODevice *vdev, int cap_offset,
         *len = bar_length;
     }
 
+    // pci_get_resource_len 通过bar索引，获取初始化硬件资源时指定Windows传过来的长度；
+    // 如可以参考 vioinput 的 PCIAllocBars函数。
+    //
+    // 这样比较的意义是什么？
     if (bar_offset + minlen > pci_get_resource_len(vdev, bar))
     {
         DPrintf(0, "bar %i is not large enough to map %zu bytes at offset %u\n", bar, minlen, bar_offset);
         return NULL;
     }
 
+    // 之前在 PCIAllocBars 存储Windows传递过来的硬件资源时，还没有进行虚拟地址映射；
+    // 此处进行虚拟地址映射，并返回 offset 处的虚拟地址。
     addr = pci_map_address_range(vdev, bar, bar_offset, bar_length);
     if (!addr)
     {
@@ -473,6 +487,7 @@ static u8 find_next_pci_vendor_capability(VirtIODevice *vdev, u8 offset)
 
     while (iterations-- && offset >= 0x40)
     {
+        // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_pci_capabilities_header
         offset &= ~3;
         if (pci_read_config_byte(vdev, offset + offsetof(PCI_CAPABILITIES_HEADER,
                                                          CapabilityID), &id) != 0)
@@ -501,6 +516,10 @@ static u8 find_first_pci_vendor_capability(VirtIODevice *vdev)
     u8 hdr_type, offset;
     u16 status;
 
+    // PCI_COMMON_HEADER 是PCI最开始的头部
+
+    // 宏
+    // vdev->system->pci_read_config_byte(vdev->DeviceContext, where, bVal)
     if (pci_read_config_byte(vdev, offsetof(PCI_COMMON_HEADER, HeaderType), &hdr_type) != 0)
     {
         return 0;
@@ -509,6 +528,7 @@ static u8 find_first_pci_vendor_capability(VirtIODevice *vdev)
     {
         return 0;
     }
+    // 判断是否支持 capability 结构
     if ((status & PCI_STATUS_CAPABILITIES_LIST) == 0)
     {
         return 0;
@@ -529,6 +549,7 @@ static u8 find_first_pci_vendor_capability(VirtIODevice *vdev)
 
     if (offset != 0)
     {
+        // 枚举查找 PCI_CAPABILITY_ID_VENDOR_SPECIFIC
         offset = find_next_pci_vendor_capability(vdev, offset);
     }
     return offset;
@@ -563,8 +584,11 @@ NTSTATUS vio_modern_initialize(VirtIODevice *vdev)
     u32 notify_length;
     u32 notify_offset;
 
+    // 通过 PCI header 的 Capabilities Pointer 枚举所有 PCI_CAPABILITY_ID_VENDOR_SPECIFIC PCI能力；
+    // 数组保存了所有Capabilities在PCI配置空间中的偏移。
+    //
     RtlZeroMemory(capabilities, sizeof(capabilities));
-    find_pci_vendor_capabilities(vdev, capabilities, VIRTIO_PCI_CAP_PCI_CFG);
+    find_pci_vendor_capabilities(vdev, capabilities, VIRTIO_PCI_CAP_PCI_CFG);   // offset is 5
 
     /* Check for a common config, if not found use legacy mode */
     if (!capabilities[VIRTIO_PCI_CAP_COMMON_CFG])
