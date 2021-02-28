@@ -287,17 +287,22 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
     NTSTATUS status;
     u16 msix_vec;
 
+    // 初始化 queue 结构体 VirtIOQueueInfo（包含virtqueue） 内存，使用2个队列
+    // 然后初始化 VirtIODevice->info/maxQueues
     status = virtio_reserve_queue_memory(vdev, nvqs);
     if (!NT_SUCCESS(status))
+
     {
         return status;
     }
 
+    // 获取终端号，参数-1，因为只创建了一个中断，否则传入queue的索引号（如果一个queue一个中断）
     /* set up the device config interrupt */
     msix_vec = vdev_get_msix_vector(vdev, -1);
 
     if (msix_vec != VIRTIO_MSI_NO_VECTOR)
     {
+        // 更新中断号到PCI设备（host使用来触发中断？）
         msix_vec = vdev->device->set_config_vector(vdev, msix_vec);
         /* Verify we had enough resources to assign the vector */
         if (msix_vec == VIRTIO_MSI_NO_VECTOR)
@@ -310,7 +315,12 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
     /* set up queue interrupts */
     for (i = 0; i < nvqs; i++)
     {
+        // 通过pQueueParams[i].interrupt 获取中断号；
+        // PVIRTIO_WDF_DRIVER pWdfDriver->pQueueParams 父调用已赋值
         msix_vec = vdev_get_msix_vector(vdev, i);
+
+        // 初始化 ->info （info 指向queue队列）
+        //
         status = vp_setup_vq(
             &vqs[i],
             vdev,

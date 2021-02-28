@@ -32,9 +32,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "osdep.h"
+#include ".\osdep.h"
 #define VIRTIO_PCI_NO_LEGACY
-#include "virtio_pci.h"
+#include ".\virtio_pci.h"
 #include "virtio.h"
 #include "kdebugprint.h"
 #include "virtio_ring.h"
@@ -60,7 +60,7 @@ static void *vio_modern_map_capability(VirtIODevice *vdev,
 
     // bar 代表了一个索引
     pci_read_config_byte(vdev, cap_offset + offsetof(struct virtio_pci_cap, bar), &bar);
-    // 获取body偏移
+    // 获取body偏移（相对于头部）
     pci_read_config_dword(vdev, cap_offset + offsetof(struct virtio_pci_cap, offset), &bar_offset);
     // 获取body长度
     pci_read_config_dword(vdev, cap_offset + offsetof(struct virtio_pci_cap, length), &bar_length);
@@ -313,9 +313,9 @@ static NTSTATUS vio_modern_query_vq_alloc(VirtIODevice *vdev,
 
 static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
                                     VirtIODevice *vdev,
-                                    VirtIOQueueInfo *info,
-                                    unsigned index,
-                                    u16 msix_vec)
+                                    VirtIOQueueInfo *info,      // queue
+                                    unsigned index,             // queue的索引，此处作info的索引
+                                    u16 msix_vec)               // queue[index] 的中断号
 {
     volatile struct virtio_pci_common_cfg *cfg = vdev->common;
     struct virtqueue *vq;
@@ -334,6 +334,7 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     /* get offset of notification word for this vq */
     off = ioread16(vdev, &cfg->queue_notify_off);
 
+    // 创建DMA common buffer
     /* try to allocate contiguous pages, scale down on failure */
     while (!(info->queue = mem_alloc_contiguous_pages(vdev, vring_pci_size(info->num, vdev->packed_ring))))
     {
@@ -347,6 +348,7 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
         }
     }
 
+    // ExAllocateWithTag
     vq_addr = mem_alloc_nonpaged_block(vdev, heap_size);
     if (vq_addr == NULL)
     {
@@ -357,14 +359,19 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     if (vdev->packed_ring)
     {
         vq = vring_new_virtqueue_packed(index, info->num,
-                                        SMP_CACHE_BYTES, vdev,
-                                        info->queue, vp_notify, vq_addr);
+                                        SMP_CACHE_BYTES,
+                                        vdev,
+                                        info->queue,
+                                        vp_notify,      // callback function
+                                        vq_addr);
     }
     else
     {
         vq = vring_new_virtqueue_split(index, info->num,
                                        SMP_CACHE_BYTES, vdev,
-                                       info->queue, vp_notify, vq_addr);
+                                       info->queue,
+                                       vp_notify,       // callback function
+                                       vq_addr);
     }
 
     if (!vq)
