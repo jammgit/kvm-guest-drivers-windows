@@ -181,6 +181,7 @@ EvtIoDeviceControl(
             {
                 ULONG i;
 
+                // GetFeatureFunc 根据不同类型的设备指向不同的回调。
                 status = STATUS_NOT_IMPLEMENTED;
                 for (i = 0; i < pContext->uNumOfClasses; i++)
                 {
@@ -289,6 +290,7 @@ ProcessInputEvent(
                     pEvent);
             }
 
+            // InputClass -> hidQueue and Complete IRQ
             CompleteHIDQueueRequest(pContext, pContext->InputClasses[i]);
         }
     }

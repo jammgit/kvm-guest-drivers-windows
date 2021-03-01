@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Interrupt related functions
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -120,6 +120,12 @@ VIOInputInterruptIsr(
 
     // Schedule a DPC if the device is using message-signaled interrupts, or
     // if the device ISR status is enabled.
+    //
+    //  info.MessageSignaled 代表是否是触发了驱动创建的中断？
+    //  VirtIOWdfGetISRStatus 读取 vdev->isr 状态；
+    //
+    // 如果qemu触发windows驱动中断只能通过写入PCI的msi的中断号，那么isr的作用是？
+    //
     if (info.MessageSignaled || VirtIOWdfGetISRStatus(&pContext->VDevice))
     {
         WdfInterruptQueueDpcForIsr(Interrupt);
@@ -161,6 +167,9 @@ VIOInputQueuesInterruptDpc(
     }
     WdfSpinLockRelease(pContext->EventQLock);
 
+    //
+    // 1. 为什么 StatusQ 获取的内存归还到 StatusQMemBlock？
+    //
     WdfSpinLockAcquire(pContext->StatusQLock);
     while ((pEventReq = virtqueue_get_buf(pContext->StatusQ, &len)) != NULL)
     {

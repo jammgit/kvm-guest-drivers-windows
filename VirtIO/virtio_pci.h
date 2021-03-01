@@ -135,11 +135,17 @@ struct virtio_pci_notify_cap
 /* Fields in VIRTIO_PCI_CAP_COMMON_CFG: */
 struct virtio_pci_common_cfg
 {
+    //
+    //  struct virtio_pci_cap cap;
+    //  在 virtio_pci_common_cfg 前还有一个 cap 头部。
+    //
+
     /* About the whole device. */
     __le32 device_feature_select;   /* read-write */
     __le32 device_feature;          /* read-only */
     __le32 guest_feature_select;    /* read-write */
     __le32 guest_feature;           /* read-write */
+
     __le16 msix_config;             /* read-write */
     __le16 num_queues;              /* read-only */
     __u8 device_status;             /* read-write */
@@ -267,7 +273,11 @@ struct virtio_device
     // opaque context value passed as first argument to virtio_system_ops callbacks
     void *DeviceContext;
 
-    // isr 是PCI的 VIRTIO_PCI_CAP_ISR_CFG偏移 映射出来可访问的虚拟地址
+    // isr 是PCI的 VIRTIO_PCI_CAP_ISR_CFG偏移 映射出来可访问的虚拟地址；
+    // 在初始化virt queue时（virtio_find_queues），有将驱动创建的中断的终端号写入到PCI配置空间(vdev->common->msix_config)。
+    //
+    // 这里的 isr 和 驱动创建的中断的终端号什么关系？
+    //
     // the ISR status field, reading causes the device to de-assert an interrupt
     volatile u8 *isr;
 

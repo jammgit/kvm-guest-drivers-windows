@@ -178,6 +178,11 @@ static void *pci_map_address_range(void *context, int bar, size_t offset, size_t
     {
         if (pBar->pBase == NULL)
         {
+            //
+            // 从代码来看，BasePA 指向I/O设备对应内存设备的地址空间；
+            // 指向 struct virtio_pci_cap , body 结构体根据具体的类型决定。
+            //
+
             ASSERT(!pBar->bPortSpace);
 #if defined(NTDDI_WINTHRESHOLD) && (NTDDI_VERSION >= NTDDI_WINTHRESHOLD)
             pBar->pBase = MmMapIoSpaceEx(

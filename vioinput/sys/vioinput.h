@@ -100,12 +100,14 @@ typedef struct _tagInputDevice
 
     WDFINTERRUPT           QueuesInterrupt; // adddevice时创建中断
 
+    // 以下两个队列位于 DMA common buffer中（初始化时common buffer也记录到了MemoryBlockCollection）
     struct virtqueue       *EventQ;                         // pnp entry 初始化
     struct virtqueue       *StatusQ;                        // pnp entry 初始化
 
     WDFSPINLOCK            EventQLock;      // adddevice时初始化
     WDFSPINLOCK            StatusQLock;     // adddevice时初始化
 
+    // 以下两块内存处于DMA内存中（该DMA内存记录在VIRTIO_WDF_DRIVER->MemoryBlockCollection）
     PVIRTIO_DMA_MEMORY_SLICED EventQMemBlock;           // pnp prepare 创建 from VIRTIO_WDF_DRIVER::MemoryBlockCollection
     PVIRTIO_DMA_MEMORY_SLICED StatusQMemBlock;          // pnp prepare 创建 from VIRTIO_WDF_DRIVER::MemoryBlockCollection
 

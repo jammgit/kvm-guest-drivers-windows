@@ -46,6 +46,18 @@
 #include "VirtIOPCIModern.tmh"
 #endif
 
+ // notify
+ //vio_modern_map_capability(vdev,
+ //                          capabilities[VIRTIO_PCI_CAP_NOTIFY_CFG], 2, 2,
+ //                          0, notify_length,
+ //                          &vdev->notify_len);
+
+//
+ //                        | <--------> length <---> |
+ // |----- cap header -----|----- cap body ----------|
+ //                             | <--> size <-> |           // 映射的内存;如果参数start是0,size是body大小，那么就映射整个body
+ //                            start
+ //
 static void *vio_modern_map_capability(VirtIODevice *vdev,
                                        int cap_offset,  // Capabilities Pointer
                                        size_t minlen,   // sizeof(struct virtio_cap_common_cfg)
@@ -467,17 +479,28 @@ static void vio_modern_del_vq(VirtIOQueueInfo *info)
 }
 
 static const struct virtio_device_ops virtio_pci_device_ops = {
-    .get_config = vio_modern_get_config,
-    .set_config = vio_modern_set_config,
-    .get_config_generation = vio_modern_get_generation,
-    .get_status = vio_modern_get_status,
-    .set_status = vio_modern_set_status,
-    .reset = vio_modern_reset,
-    .get_features = vio_modern_get_features,
-    .set_features = vio_modern_set_features,
-    .set_config_vector = vio_modern_set_config_vector,
-    .set_queue_vector = vio_modern_set_queue_vector,
-    .query_queue_alloc = vio_modern_query_vq_alloc,
+    .get_config = vio_modern_get_config,                    // vdev->config
+    .set_config = vio_modern_set_config,                    // vdev->config
+    .get_config_generation = vio_modern_get_generation,     // vdev->common->config_generation
+
+    .get_status = vio_modern_get_status,                    // vdev->common->device_status
+    .set_status = vio_modern_set_status,                    // vdev->common->device_status
+
+    .reset = vio_modern_reset,                              // vdev->common->device_status
+
+    .get_features = vio_modern_get_features,                // vdev->common->device_feature_select
+    .set_features = vio_modern_set_features,                // vdev->common->device_feature
+                                                            // vdev->common->guest_feature_select
+                                                            // vdev->common->guest_feature
+
+    .set_config_vector = vio_modern_set_config_vector,      // vdev->common->msix_config
+
+    .set_queue_vector = vio_modern_set_queue_vector,        // vdev->common->queue_select
+                                                            // vdev->common->queue_msix_vector
+
+    .query_queue_alloc = vio_modern_query_vq_alloc,         // vdev->common->num_queues
+                                                            // vdev->common->queue_select
+
     .setup_queue = vio_modern_setup_vq,
     .delete_queue = vio_modern_del_vq,
 };
@@ -594,6 +617,7 @@ NTSTATUS vio_modern_initialize(VirtIODevice *vdev)
     // 通过 PCI header 的 Capabilities Pointer 枚举所有 PCI_CAPABILITY_ID_VENDOR_SPECIFIC PCI能力；
     // 数组保存了所有Capabilities在PCI配置空间中的偏移。
     //
+    // 枚举小于 VIRTIO_PCI_CAP_PCI_CFG 的能力。
     RtlZeroMemory(capabilities, sizeof(capabilities));
     find_pci_vendor_capabilities(vdev, capabilities, VIRTIO_PCI_CAP_PCI_CFG);   // offset is 5
 
@@ -625,6 +649,7 @@ NTSTATUS vio_modern_initialize(VirtIODevice *vdev)
         return STATUS_INVALID_PARAMETER;
     }
 
+    // vio_modern_map_simple_capability(VirtIODevice *vdev, int cap_offset, size_t length, u32 alignment)
     vdev->isr = vio_modern_map_simple_capability(vdev,
                                                  capabilities[VIRTIO_PCI_CAP_ISR_CFG],
                                                  sizeof(u8), 1);
@@ -633,6 +658,9 @@ NTSTATUS vio_modern_initialize(VirtIODevice *vdev)
         return STATUS_INVALID_PARAMETER;
     }
 
+    //
+    // 读取 PCI notify 信息
+    //
     /* Read notify_off_multiplier from config space. */
     pci_read_config_dword(vdev,
                           capabilities[VIRTIO_PCI_CAP_NOTIFY_CFG] + offsetof(struct virtio_pci_notify_cap,
@@ -654,6 +682,14 @@ NTSTATUS vio_modern_initialize(VirtIODevice *vdev)
      */
     if (notify_length + (notify_offset % PAGE_SIZE) <= PAGE_SIZE)
     {
+        // 映射 notify body
+        //vio_modern_map_capability(VirtIODevice *vdev,
+        //                          int cap_offset,  // Capabilities Pointer
+        //                          size_t minlen,   // sizeof(struct virtio_cap_common_cfg)
+        //                          u32 alignment,
+        //                          u32 start,       // 0
+        //                          u32 size,        // sizeof(struct virtio_cap_common_cfg)
+        //                          size_t *len)
         vdev->notify_base = vio_modern_map_capability(vdev,
                                                       capabilities[VIRTIO_PCI_CAP_NOTIFY_CFG], 2, 2,
                                                       0, notify_length,

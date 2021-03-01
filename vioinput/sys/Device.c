@@ -260,7 +260,9 @@ VIOInputEvtDevicePrepareHardware(
         return status;
     }
 
-    // 总大小PAGE_SIZE,每个元素sizeof(VIRTIO_INPUT_EVENT)
+    // 总大小PAGE_SIZE,每个元素sizeof(VIRTIO_INPUT_EVENT)；
+    // 这些内存位于DMA的common buffer中。
+    //
     pContext->EventQMemBlock = VirtIOWdfDeviceAllocDmaMemorySliced(
         &pContext->VDevice.VIODevice, PAGE_SIZE, sizeof(VIRTIO_INPUT_EVENT));
     pContext->StatusQMemBlock = VirtIOWdfDeviceAllocDmaMemorySliced(
@@ -272,6 +274,7 @@ VIOInputEvtDevicePrepareHardware(
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
+    // 初始化设备类型
     // pContext record the descriptor
     //
     // Figure out what kind of input device this is and build a
@@ -280,6 +283,7 @@ VIOInputEvtDevicePrepareHardware(
 
     if (NT_SUCCESS(status) && !pContext->bChildPdoCreated)
     {
+        // 根据设备类型信息创建子设备
         // create pdo from pContext
         //
         // Create a child PDO with an instance path based on the

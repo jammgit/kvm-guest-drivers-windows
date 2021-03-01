@@ -212,7 +212,7 @@ typedef struct virtio_dma_memory_sliced
     PVIRTIO_WDF_DRIVER   drv;
     PVOID                va;
     RTL_BITMAP           bitmap;
-    ULONG                slice;
+    ULONG                slice;     // 分配一个元素的大小
     ULONG                bitmap_buffer[1];
 }VIRTIO_DMA_MEMORY_SLICED, *PVIRTIO_DMA_MEMORY_SLICED;
 

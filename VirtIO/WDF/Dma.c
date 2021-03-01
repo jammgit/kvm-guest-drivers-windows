@@ -50,6 +50,7 @@ static void *AllocateCommonBuffer(PVIRTIO_WDF_DRIVER pWdfDriver, size_t size, UL
         DPrintf(0, "%s FAILED(irql)\n", __FUNCTION__);
         return NULL;
     }
+
     status = WdfCommonBufferCreate(pWdfDriver->DmaEnabler, size, &attr, &commonBuffer);
     if (!NT_SUCCESS(status))
     {
@@ -291,6 +292,7 @@ PVIRTIO_DMA_MEMORY_SLICED VirtIOWdfDeviceAllocDmaMemorySliced(
         return NULL;
     }
     RtlZeroMemory(p, sizeof(*p));
+    // 分配 common buffer，并将记录到 MemoryBlockCollection
     p->va = AllocateCommonBuffer(pWdfDriver, blockSize, 0);
     p->pa = GetPhysicalAddress(pWdfDriver, p->va);
     if (!p->va || !p->pa.QuadPart)
