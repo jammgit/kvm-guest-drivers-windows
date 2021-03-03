@@ -57,7 +57,7 @@ typedef struct virtio_wdf_driver
     ULONG                   nInterrupts;        //
     ULONG                   nMSIInterrupts;     // message-signaled interrupt 个数
 
-    WDFINTERRUPT            ConfigInterrupt;
+    WDFINTERRUPT            ConfigInterrupt;    // vioinput驱动为NULL
     PVIRTIO_WDF_QUEUE_PARAM pQueueParams;
 
     WDFDMAENABLER           DmaEnabler;

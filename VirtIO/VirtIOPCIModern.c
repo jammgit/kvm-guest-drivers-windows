@@ -292,13 +292,17 @@ static NTSTATUS vio_modern_query_vq_alloc(VirtIODevice *vdev,
     volatile struct virtio_pci_common_cfg *cfg = vdev->common;
     u16 num;
 
+    // 是否超过最大队列数量
     if (index >= ioread16(vdev, &cfg->num_queues))
     {
         return STATUS_NOT_FOUND;
     }
 
+    // 写入当前需要初始化的队列, WRITE_PORT_XXX
     /* Select the queue we're interested in */
     iowrite16(vdev, (u16)index, &cfg->queue_select);
+
+    // 怎么马上能获取到这个队列的信息的？
 
     /* Check if queue is either not available or already active. */
     num = ioread16(vdev, &cfg->queue_size);
@@ -346,7 +350,7 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     /* get offset of notification word for this vq */
     off = ioread16(vdev, &cfg->queue_notify_off);
 
-    // 创建DMA common buffer
+    // 通过 DmaEnabler 创建DMA common buffer， 返回虚拟地址
     /* try to allocate contiguous pages, scale down on failure */
     while (!(info->queue = mem_alloc_contiguous_pages(vdev, vring_pci_size(info->num, vdev->packed_ring))))
     {

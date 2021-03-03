@@ -79,9 +79,12 @@ NTSTATUS VirtIOWdfInitialize(PVIRTIO_WDF_DRIVER pWdfDriver,
         return status;
     }
 
+    // Use scatter/gather, 64-bit addresses, and duplex-type profile.
+
     /* set max transfer size to 256M, should be enough for any purpose */
     /* number of SG fragments is unlimited */
     WDF_DMA_ENABLER_CONFIG_INIT(&dmaEnablerConfig, WdfDmaProfileScatterGather64Duplex, 0xFFFFFFF);
+    // parent object-> Device， 删除parent时自动删除 DMA enable object
     status = WdfDmaEnablerCreate(Device, &dmaEnablerConfig, WDF_NO_OBJECT_ATTRIBUTES, &pWdfDriver->DmaEnabler);
     if (NT_SUCCESS(status))
     {
@@ -221,6 +224,10 @@ NTSTATUS VirtIOWdfInitQueues(PVIRTIO_WDF_DRIVER pWdfDriver,
     /* register queue interrupts */
     for (i = 0; i < nQueues; i++)
     {
+        // 有什么用？
+        //
+        // queue中断创建 VIRTIO_WDF_INTERRUPT_CONTEXT 上下文，其中保存了中断号；
+        //
         status = PCIRegisterInterrupt(pQueueParams[i].Interrupt);
         if (!NT_SUCCESS(status))
         {
@@ -229,11 +236,15 @@ NTSTATUS VirtIOWdfInitQueues(PVIRTIO_WDF_DRIVER pWdfDriver,
     }
 
     /* find and initialize queues */
+    // 指向 WDFINTERRUPT 对象
     pWdfDriver->pQueueParams = pQueueParams;
+
     status = virtio_find_queues(
         &pWdfDriver->VIODevice,
         nQueues,
         pQueues);
+
+    // 复位
     pWdfDriver->pQueueParams = NULL;
 
     return status;

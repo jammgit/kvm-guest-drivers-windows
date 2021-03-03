@@ -1,4 +1,4 @@
-/*
+﻿/*
  * PCI config space & resources helper routines
  *
  * Copyright (c) 2016-2017 Red Hat, Inc.
@@ -49,54 +49,65 @@ NTSTATUS PCIAllocBars(WDFCMRESLIST ResourcesTranslated,
         PCI_WHICHSPACE_CONFIG,
         &PCIHeader,
         0,
-        sizeof(PCIHeader)) != sizeof(PCIHeader)) {
+        sizeof(PCIHeader)) != sizeof(PCIHeader))
+    {
         return STATUS_DEVICE_CONFIGURATION_ERROR;
     }
-    
-    for (i = 0; i < nListSize; i++) {
+
+    for (i = 0; i < nListSize; i++)
+    {
         pResDescriptor = WdfCmResourceListGetDescriptor(ResourcesTranslated, i);
-        if (pResDescriptor) {
-            switch (pResDescriptor->Type) {
-                case CmResourceTypePort:
-                case CmResourceTypeMemory:
-                    pBar = (PVIRTIO_WDF_BAR)ExAllocatePoolWithTag(
-                        NonPagedPool,
-                        sizeof(VIRTIO_WDF_BAR),
-                        pWdfDriver->MemoryTag);
-                    if (pBar == NULL) {
-                        /* undo what we've done so far */
-                        PCIFreeBars(pWdfDriver);
-                        return STATUS_INSUFFICIENT_RESOURCES;
-                    }
+        if (pResDescriptor)
+        {
+            switch (pResDescriptor->Type)
+            {
+            case CmResourceTypePort:
+            case CmResourceTypeMemory:
+                pBar = (PVIRTIO_WDF_BAR)ExAllocatePoolWithTag(
+                    NonPagedPool,
+                    sizeof(VIRTIO_WDF_BAR),
+                    pWdfDriver->MemoryTag);
+                if (pBar == NULL)
+                {
+                    /* undo what we've done so far */
+                    PCIFreeBars(pWdfDriver);
+                    return STATUS_INSUFFICIENT_RESOURCES;
+                }
 
-                    /* unfortunately WDF doesn't tell us BAR indices */
-                    pBar->iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
-                    if (pBar->iBar < 0) {
-                        /* undo what we've done so far */
-                        PCIFreeBars(pWdfDriver);
-                        return STATUS_NOT_FOUND;
-                    }
+                /* unfortunately WDF doesn't tell us BAR indices */
+                pBar->iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
+                if (pBar->iBar < 0)
+                {
+                    /* undo what we've done so far */
+                    PCIFreeBars(pWdfDriver);
+                    return STATUS_NOT_FOUND;
+                }
 
-                    pBar->bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
-                    pBar->BasePA = pResDescriptor->u.Memory.Start;
-                    pBar->uLength = pResDescriptor->u.Memory.Length;
+                pBar->bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
+                pBar->BasePA = pResDescriptor->u.Memory.Start;
+                pBar->uLength = pResDescriptor->u.Memory.Length;
 
-                    if (pBar->bPortSpace) {
-                        pBar->pBase = (PVOID)(ULONG_PTR)pBar->BasePA.QuadPart;
-                    } else {
-                        /* memory regions are mapped into the virtual memory space on demand */
-                        pBar->pBase = NULL;
-                    }
-                    PushEntryList(&pWdfDriver->PCIBars, &pBar->ListEntry);
-                    break;
+                if (pBar->bPortSpace)
+                {
+                    pBar->pBase = (PVOID)(ULONG_PTR)pBar->BasePA.QuadPart;
+                }
+                else
+                {
+                    /* memory regions are mapped into the virtual memory space on demand */
+                    pBar->pBase = NULL;
+                }
+                PushEntryList(&pWdfDriver->PCIBars, &pBar->ListEntry);
 
-                case CmResourceTypeInterrupt:
-                    nInterrupts++;
-                    if (pResDescriptor->Flags &
-                        (CM_RESOURCE_INTERRUPT_LATCHED | CM_RESOURCE_INTERRUPT_MESSAGE)) {
-                        nMSIInterrupts++;
-                    }
-                    break;
+                break;
+
+            case CmResourceTypeInterrupt:
+                nInterrupts++;
+                if (pResDescriptor->Flags &
+                    (CM_RESOURCE_INTERRUPT_LATCHED | CM_RESOURCE_INTERRUPT_MESSAGE))
+                {
+                    nMSIInterrupts++;
+                }
+                break;
             }
         }
     }
@@ -112,9 +123,11 @@ void PCIFreeBars(PVIRTIO_WDF_DRIVER pWdfDriver)
     PSINGLE_LIST_ENTRY iter;
 
     /* unmap IO space and free our BAR descriptors */
-    while (iter = PopEntryList(&pWdfDriver->PCIBars)) {
+    while (iter = PopEntryList(&pWdfDriver->PCIBars))
+    {
         PVIRTIO_WDF_BAR pBar = CONTAINING_RECORD(iter, VIRTIO_WDF_BAR, ListEntry);
-        if (pBar->pBase != NULL && !pBar->bPortSpace) {
+        if (pBar->pBase != NULL && !pBar->bPortSpace)
+        {
             MmUnmapIoSpace(pBar->pBase, pBar->uLength);
         }
         ExFreePoolWithTag(pBar, pWdfDriver->MemoryTag);
@@ -132,7 +145,7 @@ int PCIReadConfig(PVIRTIO_WDF_DRIVER pWdfDriver,
         pWdfDriver->PCIBus.Context,
         PCI_WHICHSPACE_CONFIG,
         buffer,
-        where,
+    where,
         (ULONG)length);
     return (read == length ? 0 : -1);
 }
@@ -143,15 +156,19 @@ NTSTATUS PCIRegisterInterrupt(WDFINTERRUPT Interrupt)
     WDF_OBJECT_ATTRIBUTES attributes;
     NTSTATUS status;
 
-    if (Interrupt == NULL) {
+    if (Interrupt == NULL)
+    {
         status = STATUS_SUCCESS;
-    } else {
+    }
+    else
+    {
         WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, VIRTIO_WDF_INTERRUPT_CONTEXT);
         status = WdfObjectAllocateContext(
             Interrupt,
             &attributes,
             &context);
-        if (status == STATUS_OBJECT_NAME_EXISTS) {
+        if (status == STATUS_OBJECT_NAME_EXISTS)
+        {
             /* this is fine, we want to reuse the pre-existing context */
             status = STATUS_SUCCESS;
         }
@@ -165,20 +182,26 @@ u16 PCIGetMSIInterruptVector(WDFINTERRUPT Interrupt)
     PVIRTIO_WDF_INTERRUPT_CONTEXT pContext;
     u16 uMessageNumber = VIRTIO_MSI_NO_VECTOR;
 
-    if (Interrupt != NULL) {
+    if (Interrupt != NULL)
+    {
         pContext = GetInterruptContext(Interrupt);
-        if (pContext && pContext->bMessageNumberSet) {
+        if (pContext && pContext->bMessageNumberSet)
+        {
             uMessageNumber = pContext->uMessageNumber;
-        } else {
+        }
+        else
+        {
             WDF_INTERRUPT_INFO_INIT(&info);
             WdfInterruptGetInfo(Interrupt, &info);
 
-            if (info.MessageSignaled) {
+            if (info.MessageSignaled)
+            {
                 ASSERT(info.MessageNumber < MAXUSHORT);
                 uMessageNumber = (u16)info.MessageNumber;
             }
 
-            if (pContext) {
+            if (pContext)
+            {
                 pContext->uMessageNumber = uMessageNumber;
                 pContext->bMessageNumberSet = true;
             }

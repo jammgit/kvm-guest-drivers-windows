@@ -1,4 +1,4 @@
-/*
+ï»¿/*
  * Virtio PCI driver - common functionality for all device versions
  *
  * Copyright IBM Corp. 2007
@@ -253,16 +253,17 @@ NTSTATUS virtio_reserve_queue_memory(VirtIODevice *vdev, unsigned nvqs)
     return STATUS_SUCCESS;
 }
 
-static NTSTATUS vp_setup_vq(struct virtqueue **queue,
-                            VirtIODevice *vdev, unsigned index,
-                            u16 msix_vec)
+static NTSTATUS vp_setup_vq(struct virtqueue **queue,   // queueåˆå§‹åŒ–å®Œï¼ŒæŒ‡é’ˆæ—¢ä¿å­˜åœ¨åº•å±‚å¯¹è±¡ï¼Œä¹Ÿä¼ é€’ç»™ä¸Šå±‚å¯¹è±¡ä½¿ç”¨
+                            VirtIODevice *vdev,
+                            unsigned index,             // queue index
+                            u16 msix_vec)               // queue interrupt number
 {
     VirtIOQueueInfo *info = &vdev->info[index];
 
     NTSTATUS status = vdev->device->setup_queue(queue, vdev, info, index, msix_vec);
     if (NT_SUCCESS(status))
     {
-        info->vq = *queue;
+        info->vq = *queue;  // åº•å±‚ä¿å­˜æŒ‡é’ˆ
     }
 
     return status;
@@ -283,12 +284,14 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
                             unsigned nvqs,
                             struct virtqueue *vqs[])
 {
+    struct virtio_device a;
+
     unsigned i;
     NTSTATUS status;
     u16 msix_vec;
 
-    // ³õÊ¼»¯ queue ½á¹¹Ìå VirtIOQueueInfo£¨°üº¬virtqueue£© ÄÚ´æ£¬Ê¹ÓÃ2¸ö¶ÓÁĞ
-    // È»ºó³õÊ¼»¯ VirtIODevice->info/maxQueues
+    // åˆå§‹åŒ– queue ç»“æ„ä½“ VirtIOQueueInfoï¼ˆåŒ…å«virtqueueï¼‰ å†…å­˜ï¼Œä½¿ç”¨2ä¸ªé˜Ÿåˆ—
+    // ç„¶ååˆå§‹åŒ– VirtIODevice->info/maxQueues
     status = virtio_reserve_queue_memory(vdev, nvqs);
     if (!NT_SUCCESS(status))
 
@@ -296,13 +299,16 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
         return status;
     }
 
-    // »ñÈ¡ÖÕ¶ËºÅ£¬²ÎÊı-1£¬ÒòÎªÖ»´´½¨ÁËÒ»¸öÖĞ¶Ï£¬·ñÔò´«ÈëqueueµÄË÷ÒıºÅ£¨Èç¹ûÒ»¸öqueueÒ»¸öÖĞ¶Ï£©
+    // è·å–ç»ˆç«¯å·ï¼Œå‚æ•°-1ï¼Œå› ä¸ºåªåˆ›å»ºäº†ä¸€ä¸ªä¸­æ–­ï¼Œå¦åˆ™ä¼ å…¥queueçš„ç´¢å¼•å·ï¼ˆå¦‚æœä¸€ä¸ªqueueä¸€ä¸ªä¸­æ–­ï¼‰
+    //
+    // è·å– configInterrupt çš„ä¸­æ–­å·ï¼Œvioinputæ²¡æœ‰åˆ›å»º configInterrupt, è¿”å›VIRTIO_MSI_NO_VECTOR
     /* set up the device config interrupt */
     msix_vec = vdev_get_msix_vector(vdev, -1);
 
     if (msix_vec != VIRTIO_MSI_NO_VECTOR)
     {
-        // ¸üĞÂÖĞ¶ÏºÅµ½PCIÉè±¸£¨hostÊ¹ÓÃÀ´´¥·¢ÖĞ¶Ï£¿£©
+        // æ›´æ–°ä¸­æ–­å·åˆ°PCIè®¾å¤‡ï¼ˆhostä½¿ç”¨æ¥è§¦å‘ä¸­æ–­ï¼Ÿï¼‰
+        // å†™åˆ° vdev->common->msix_configï¼Œ
         msix_vec = vdev->device->set_config_vector(vdev, msix_vec);
         /* Verify we had enough resources to assign the vector */
         if (msix_vec == VIRTIO_MSI_NO_VECTOR)
@@ -315,11 +321,11 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
     /* set up queue interrupts */
     for (i = 0; i < nvqs; i++)
     {
-        // Í¨¹ıpQueueParams[i].interrupt »ñÈ¡ÖĞ¶ÏºÅ£»
-        // PVIRTIO_WDF_DRIVER pWdfDriver->pQueueParams ¸¸µ÷ÓÃÒÑ¸³Öµ
+        // é€šè¿‡pQueueParams[i].interrupt è·å–ä¸­æ–­å·ï¼›
+        // PVIRTIO_WDF_DRIVER pWdfDriver->pQueueParams çˆ¶è°ƒç”¨å·²èµ‹å€¼
         msix_vec = vdev_get_msix_vector(vdev, i);
 
-        // ³õÊ¼»¯ ->info £¨info Ö¸Ïòqueue¶ÓÁĞ£©
+        // åˆå§‹åŒ– ->info ï¼ˆinfo æŒ‡å‘queueé˜Ÿåˆ—ï¼‰
         //
         status = vp_setup_vq(
             &vqs[i],

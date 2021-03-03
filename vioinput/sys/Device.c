@@ -234,6 +234,144 @@ static void VIOInputFreeMemBlocks(PINPUT_DEVICE pContext)
     }
 }
 
+VOID PrintResource(
+    IN WDFDEVICE Device,                // BUS FDO 设备对象
+    IN WDFCMRESLIST ResourcesRaw,
+    IN WDFCMRESLIST ResourcesTranslated)
+{
+    PINPUT_DEVICE pContext = GetDeviceContext(Device);
+    PVIRTIO_WDF_DRIVER pWdfDriver = &pContext->VDevice;
+
+    PCM_PARTIAL_RESOURCE_DESCRIPTOR pResDescriptor;
+    ULONG nInterrupts = 0, nMSIInterrupts = 0;
+    int nListSize = WdfCmResourceListGetCount(ResourcesTranslated);
+    int i;
+
+    PCI_COMMON_HEADER PCIHeader = { 0 };
+    /* read the PCI config header */
+    if (pWdfDriver->PCIBus.GetBusData(
+        pWdfDriver->PCIBus.Context,
+        PCI_WHICHSPACE_CONFIG,
+        &PCIHeader,
+        0,
+        sizeof(PCIHeader)) != sizeof(PCIHeader))
+    {
+        return;
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS, "--------> Hardware resource(raw):");
+
+    nInterrupts = 0;
+    nMSIInterrupts = 0;
+    nListSize = WdfCmResourceListGetCount(ResourcesRaw);
+    for (i = 0; i < nListSize; i++)
+    {
+        pResDescriptor = WdfCmResourceListGetDescriptor(ResourcesRaw, i);
+        if (pResDescriptor)
+        {
+            switch (pResDescriptor->Type)
+            {
+            case CmResourceTypePort:
+            {
+                /* unfortunately WDF doesn't tell us BAR indices */
+                int iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
+                BOOLEAN bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
+                PHYSICAL_ADDRESS BasePA = pResDescriptor->u.Memory.Start;
+                ULONG uLength = pResDescriptor->u.Memory.Length;
+
+                TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS,
+                            "Port, PortSpace:%s, iBar:%d, PA:0x%llX, Length:0x%X",
+                            (bPortSpace ? "true" : "false"), iBar, BasePA.QuadPart, uLength);
+
+                break;
+            }
+            case CmResourceTypeMemory:
+            {
+                /* unfortunately WDF doesn't tell us BAR indices */
+                int iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
+                BOOLEAN bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
+                PHYSICAL_ADDRESS BasePA = pResDescriptor->u.Memory.Start;
+                ULONG uLength = pResDescriptor->u.Memory.Length;
+
+                TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS,
+                            "Memory, PortSpace:%s, iBar:%d, PA:0x%llX, Length:0x%X",
+                            (bPortSpace ? "true" : "false"), iBar, BasePA.QuadPart, uLength);
+
+                break;
+            }
+
+            case CmResourceTypeInterrupt:
+                nInterrupts++;
+                if (pResDescriptor->Flags &
+                    (CM_RESOURCE_INTERRUPT_LATCHED | CM_RESOURCE_INTERRUPT_MESSAGE))
+                {
+                    nMSIInterrupts++;
+                }
+                break;
+            }
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS,
+                "Interrupt, ISR:%d, MS-ISR:%d", nInterrupts, nMSIInterrupts);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS, "--------> Hardware resource(translated):");
+
+    nInterrupts = 0;
+    nMSIInterrupts = 0;
+    nListSize = WdfCmResourceListGetCount(ResourcesTranslated);
+    for (i = 0; i < nListSize; i++)
+    {
+        pResDescriptor = WdfCmResourceListGetDescriptor(ResourcesTranslated, i);
+        if (pResDescriptor)
+        {
+            switch (pResDescriptor->Type)
+            {
+            case CmResourceTypePort:
+            {
+                /* unfortunately WDF doesn't tell us BAR indices */
+                int iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
+                BOOLEAN bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
+                PHYSICAL_ADDRESS BasePA = pResDescriptor->u.Memory.Start;
+                ULONG uLength = pResDescriptor->u.Memory.Length;
+
+                TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS,
+                            "Port, PortSpace:%s, iBar:%d, PA:0x%llX, Length:0x%X",
+                            (bPortSpace ? "true" : "false"), iBar, BasePA.QuadPart, uLength);
+
+                break;
+            }
+            case CmResourceTypeMemory:
+            {
+                /* unfortunately WDF doesn't tell us BAR indices */
+                int iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
+                BOOLEAN bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
+                PHYSICAL_ADDRESS BasePA = pResDescriptor->u.Memory.Start;
+                ULONG uLength = pResDescriptor->u.Memory.Length;
+
+                TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS,
+                            "Memory, PortSpace:%s, iBar:%d, PA:0x%llX, Length:0x%X",
+                            (bPortSpace ? "true" : "false"), iBar, BasePA.QuadPart, uLength);
+
+                break;
+            }
+
+            case CmResourceTypeInterrupt:
+                nInterrupts++;
+                if (pResDescriptor->Flags &
+                    (CM_RESOURCE_INTERRUPT_LATCHED | CM_RESOURCE_INTERRUPT_MESSAGE))
+                {
+                    nMSIInterrupts++;
+                }
+                break;
+            }
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_HW_ACCESS,
+                "Interrupt, ISR:%d, MS-ISR:%d", nInterrupts, nMSIInterrupts);
+}
+
 NTSTATUS
 VIOInputEvtDevicePrepareHardware(
     IN WDFDEVICE Device,                // BUS FDO 设备对象
@@ -259,6 +397,8 @@ VIOInputEvtDevicePrepareHardware(
         TraceEvents(TRACE_LEVEL_ERROR, DBG_HW_ACCESS, "VirtIOWdfInitialize failed with %x\n", status);
         return status;
     }
+
+    PrintResource(Device, ResourcesRaw, ResourcesTranslated);
 
     // 总大小PAGE_SIZE,每个元素sizeof(VIRTIO_INPUT_EVENT)；
     // 这些内存位于DMA的common buffer中。

@@ -101,8 +101,8 @@ typedef struct _tagInputDevice
     WDFINTERRUPT           QueuesInterrupt; // adddevice时创建中断
 
     // 以下两个队列位于 DMA common buffer中（初始化时common buffer也记录到了MemoryBlockCollection）
-    struct virtqueue       *EventQ;                         // pnp entry 初始化
-    struct virtqueue       *StatusQ;                        // pnp entry 初始化
+    struct virtqueue       *EventQ;                         // pnp entry 初始化，指向底层 VDevice->VIODevice->info[0]->vq
+    struct virtqueue       *StatusQ;                        // pnp entry 初始化，指向底层 VDevice->VIODevice->info[1]->vq
 
     WDFSPINLOCK            EventQLock;      // adddevice时初始化
     WDFSPINLOCK            StatusQLock;     // adddevice时初始化
