@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Packed virtio ring manipulation routines
  *
  * Copyright 2019 Red Hat, Inc.
@@ -39,14 +39,16 @@
 
 #include <pshpack1.h>
 
-struct vring_packed_desc_event {
+struct vring_packed_desc_event
+{
     /* Descriptor Ring Change Event Offset/Wrap Counter. */
     __le16 off_wrap;
     /* Descriptor Ring Change Event Flags. */
     __le16 flags;
 };
 
-struct vring_packed_desc {
+struct vring_packed_desc
+{
     /* Buffer Address. */
     __virtio64 addr;
     /* Buffer Length. */
@@ -76,7 +78,7 @@ struct vring_packed_desc {
 #define VRING_PACKED_DESC_F_AVAIL	7
 #define VRING_PACKED_DESC_F_USED	15
 
-/* Enable events in packed ring. */
+ /* Enable events in packed ring. */
 #define VRING_PACKED_EVENT_FLAG_ENABLE	0x0
 /* Disable events in packed ring. */
 #define VRING_PACKED_EVENT_FLAG_DISABLE	0x1
@@ -93,11 +95,11 @@ struct vring_packed_desc {
   */
 #define VRING_PACKED_EVENT_F_WRAP_CTR	15
 
-/* The following is used with USED_EVENT_IDX and AVAIL_EVENT_IDX */
-/* Assuming a given event_idx value from the other side, if
- * we have just incremented index from old to new_idx,
- * should we trigger an event?
- */
+  /* The following is used with USED_EVENT_IDX and AVAIL_EVENT_IDX */
+  /* Assuming a given event_idx value from the other side, if
+   * we have just incremented index from old to new_idx,
+   * should we trigger an event?
+   */
 static inline bool vring_need_event(__u16 event_idx, __u16 new_idx, __u16 old)
 {
     /* Note: Xen has similar logic for notification hold-off
@@ -108,14 +110,16 @@ static inline bool vring_need_event(__u16 event_idx, __u16 new_idx, __u16 old)
     return (__u16)(new_idx - event_idx - 1) < (__u16)(new_idx - old);
 }
 
-struct vring_desc_state_packed {
+struct vring_desc_state_packed
+{
     void *data;			/* Data for callback. */
     u16 num;			/* Descriptor list length. */
     u16 next;			/* The next desc state in a list. */
     u16 last;			/* The last desc state in a list. */
 };
 
-struct virtqueue_packed {
+struct virtqueue_packed
+{
     struct virtqueue vq;
     /* Number we've added since last sync. */
     unsigned int num_added;
@@ -140,7 +144,8 @@ struct virtqueue_packed {
          * guest byte order.
          */
         u16 event_flags_shadow;
-        struct {
+        struct
+        {
             unsigned int num;
             struct vring_packed_desc *desc;
             struct vring_packed_desc_event *driver;
@@ -189,9 +194,11 @@ static int virtqueue_add_buf_packed(
     BUG_ON(descs_used == 0);
     BUG_ON(id >= vq->packed.vring.num);
 
-    if (va_indirect && vq->num_free > 0) {
+    if (va_indirect && vq->num_free > 0)
+    {
         desc = va_indirect;
-        for (i = 0; i < descs_used; i++) {
+        for (i = 0; i < descs_used; i++)
+        {
             desc[i].flags = i < out ? 0 : VRING_DESC_F_WRITE;
             desc[i].addr = sg[i].physAddr.QuadPart;
             desc[i].len = sg[i].length;
@@ -205,7 +212,8 @@ static int virtqueue_add_buf_packed(
 
         DPrintf(5, "Added buffer head %i to Q%d\n", head, vq->vq.index);
         head++;
-        if (head >= vq->packed.vring.num) {
+        if (head >= vq->packed.vring.num)
+        {
             head = 0;
             vq->packed.avail_wrap_counter ^= 1;
             vq->avail_used_flags ^=
@@ -223,37 +231,44 @@ static int virtqueue_add_buf_packed(
         vq->packed.desc_state[id].num = 1;
         vq->packed.desc_state[id].data = opaque;
         vq->packed.desc_state[id].last = id;
-
-    } else {
+    }
+    else
+    {
         unsigned int n;
         u16 curr, prev, head_flags;
-        if (vq->num_free < descs_used) {
+        if (vq->num_free < descs_used)
+        {
             DPrintf(6, "Can't add buffer to Q%d\n", vq->vq.index);
             return -ENOSPC;
         }
         desc = vq->packed.vring.desc;
         i = head;
         curr = id;
-        for (n = 0; n < descs_used; n++) {
+        for (n = 0; n < descs_used; n++)
+        {
             u16 flags = vq->avail_used_flags;
             flags |= n < out ? 0 : VRING_DESC_F_WRITE;
-            if (n != descs_used - 1) {
+            if (n != descs_used - 1)
+            {
                 flags |= VRING_DESC_F_NEXT;
             }
             desc[i].addr = sg[n].physAddr.QuadPart;
             desc[i].len = sg[n].length;
             desc[i].id = id;
-            if (n == 0) {
+            if (n == 0)
+            {
                 head_flags = flags;
             }
-            else {
+            else
+            {
                 desc[i].flags = flags;
             }
 
             prev = curr;
             curr = vq->packed.desc_state[curr].next;
 
-            if (++i >= vq->packed.vring.num) {
+            if (++i >= vq->packed.vring.num)
+            {
                 i = 0;
                 vq->avail_used_flags ^=
                     1 << VRING_PACKED_DESC_F_AVAIL |
@@ -309,7 +324,8 @@ static void *virtqueue_detach_unused_buf_packed(struct virtqueue *_vq)
     unsigned int i;
     void *buf;
 
-    for (i = 0; i < vq->packed.vring.num; i++) {
+    for (i = 0; i < vq->packed.vring.num; i++)
+    {
         if (!vq->packed.desc_state[i].data)
             continue;
         /* detach_buf clears data, so grab it now. */
@@ -327,14 +343,15 @@ static void virtqueue_disable_cb_packed(struct virtqueue *_vq)
 {
     struct virtqueue_packed *vq = packedvq(_vq);
 
-    if (vq->packed.event_flags_shadow != VRING_PACKED_EVENT_FLAG_DISABLE) {
+    if (vq->packed.event_flags_shadow != VRING_PACKED_EVENT_FLAG_DISABLE)
+    {
         vq->packed.event_flags_shadow = VRING_PACKED_EVENT_FLAG_DISABLE;
         vq->packed.vring.driver->flags = vq->packed.event_flags_shadow;
     }
 }
 
 static inline bool is_used_desc_packed(const struct virtqueue_packed *vq,
-    u16 idx, bool used_wrap_counter)
+                                       u16 idx, bool used_wrap_counter)
 {
     bool avail, used;
     u16 flags;
@@ -356,7 +373,6 @@ static inline bool virtqueue_poll_packed(struct virtqueue_packed *vq, u16 off_wr
     used_idx = off_wrap & ~(1 << VRING_PACKED_EVENT_F_WRAP_CTR);
 
     return is_used_desc_packed(vq, used_idx, wrap_counter);
-
 }
 
 static inline unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue_packed *vq)
@@ -367,11 +383,12 @@ static inline unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue_packe
      * more to do.
      */
 
-    if (event_suppression_enabled) {
+    if (event_suppression_enabled)
+    {
         vq->packed.vring.driver->off_wrap =
             vq->last_used_idx |
             (vq->packed.used_wrap_counter <<
-                VRING_PACKED_EVENT_F_WRAP_CTR);
+             VRING_PACKED_EVENT_F_WRAP_CTR);
         /*
          * We need to update event offset and event wrap
          * counter first before updating event flags.
@@ -379,7 +396,8 @@ static inline unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue_packe
         KeMemoryBarrier();
     }
 
-    if (vq->packed.event_flags_shadow == VRING_PACKED_EVENT_FLAG_DISABLE) {
+    if (vq->packed.event_flags_shadow == VRING_PACKED_EVENT_FLAG_DISABLE)
+    {
         vq->packed.event_flags_shadow = event_suppression_enabled ?
             VRING_PACKED_EVENT_FLAG_DESC :
             VRING_PACKED_EVENT_FLAG_ENABLE;
@@ -387,7 +405,7 @@ static inline unsigned virtqueue_enable_cb_prepare_packed(struct virtqueue_packe
     }
 
     return vq->last_used_idx | ((u16)vq->packed.used_wrap_counter <<
-        VRING_PACKED_EVENT_F_WRAP_CTR);
+                                VRING_PACKED_EVENT_F_WRAP_CTR);
 }
 
 static bool virtqueue_enable_cb_packed(struct virtqueue *_vq)
@@ -410,13 +428,15 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
      * more to do.
      */
 
-    if (event_suppression_enabled) {
+    if (event_suppression_enabled)
+    {
         /* TODO: tune this threshold */
         bufs = (vq->packed.vring.num - vq->num_free) * 3 / 4;
         wrap_counter = vq->packed.used_wrap_counter;
 
         used_idx = vq->last_used_idx + bufs;
-        if (used_idx >= vq->packed.vring.num) {
+        if (used_idx >= vq->packed.vring.num)
+        {
             used_idx -= (u16)vq->packed.vring.num;
             wrap_counter ^= 1;
         }
@@ -431,7 +451,8 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
         KeMemoryBarrier();
     }
 
-    if (vq->packed.event_flags_shadow == VRING_PACKED_EVENT_FLAG_DISABLE) {
+    if (vq->packed.event_flags_shadow == VRING_PACKED_EVENT_FLAG_DISABLE)
+    {
         vq->packed.event_flags_shadow = event_suppression_enabled ?
             VRING_PACKED_EVENT_FLAG_DESC :
             VRING_PACKED_EVENT_FLAG_ENABLE;
@@ -445,8 +466,9 @@ static bool virtqueue_enable_cb_delayed_packed(struct virtqueue *_vq)
     KeMemoryBarrier();
 
     if (is_used_desc_packed(vq,
-        vq->last_used_idx,
-        vq->packed.used_wrap_counter)) {
+                            vq->last_used_idx,
+                            vq->packed.used_wrap_counter))
+    {
         return false;
     }
 
@@ -480,7 +502,7 @@ static void virtqueue_shutdown_packed(struct virtqueue *_vq)
 static inline bool more_used_packed(const struct virtqueue_packed *vq)
 {
     return is_used_desc_packed(vq, vq->last_used_idx,
-        vq->packed.used_wrap_counter);
+                               vq->packed.used_wrap_counter);
 }
 
 static void *virtqueue_get_buf_packed(
@@ -491,7 +513,8 @@ static void *virtqueue_get_buf_packed(
     u16 last_used, id;
     void *ret;
 
-    if (!more_used_packed(vq)) {
+    if (!more_used_packed(vq))
+    {
         DPrintf(6, "%s: No more buffers in queue\n", __FUNCTION__);
         return NULL;
     }
@@ -503,11 +526,13 @@ static void *virtqueue_get_buf_packed(
     id = vq->packed.vring.desc[last_used].id;
     *len = vq->packed.vring.desc[last_used].len;
 
-    if (id >= vq->packed.vring.num) {
+    if (id >= vq->packed.vring.num)
+    {
         BAD_RING(vq, "id %u out of range\n", id);
         return NULL;
     }
-    if (!vq->packed.desc_state[id].data) {
+    if (!vq->packed.desc_state[id].data)
+    {
         BAD_RING(vq, "id %u is not a head!\n", id);
         return NULL;
     }
@@ -517,7 +542,8 @@ static void *virtqueue_get_buf_packed(
     detach_buf_packed(vq, id);
 
     vq->last_used_idx += vq->packed.desc_state[id].num;
-    if (vq->last_used_idx >= vq->packed.vring.num) {
+    if (vq->last_used_idx >= vq->packed.vring.num)
+    {
         vq->last_used_idx -= (u16)vq->packed.vring.num;
         vq->packed.used_wrap_counter ^= 1;
     }
@@ -527,10 +553,11 @@ static void *virtqueue_get_buf_packed(
      * by writing event index and flush out the write before
      * the read in the next get_buf call.
      */
-    if (vq->packed.event_flags_shadow == VRING_PACKED_EVENT_FLAG_DESC) {
+    if (vq->packed.event_flags_shadow == VRING_PACKED_EVENT_FLAG_DESC)
+    {
         vq->packed.vring.driver->off_wrap = vq->last_used_idx |
             ((u16)vq->packed.used_wrap_counter <<
-                VRING_PACKED_EVENT_F_WRAP_CTR);
+             VRING_PACKED_EVENT_F_WRAP_CTR);
         KeMemoryBarrier();
     }
 
@@ -548,8 +575,10 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
     struct virtqueue_packed *vq = packedvq(_vq);
     u16 new, old, off_wrap, flags, wrap_counter, event_idx;
     bool needs_kick;
-    union {
-        struct {
+    union
+    {
+        struct
+        {
             __le16 off_wrap;
             __le16 flags;
         };
@@ -569,7 +598,8 @@ static bool virtqueue_kick_prepare_packed(struct virtqueue *_vq)
     snapshot.value32 = *(u32 *)vq->packed.vring.device;
     flags = snapshot.flags;
 
-    if (flags != VRING_PACKED_EVENT_FLAG_DESC) {
+    if (flags != VRING_PACKED_EVENT_FLAG_DESC)
+    {
         needs_kick = (flags != VRING_PACKED_EVENT_FLAG_DISABLE);
         goto out;
     }
@@ -600,9 +630,9 @@ struct virtqueue *vring_new_virtqueue_packed(
     unsigned int num,                   /* virtqueue size (always a power of 2) */
     unsigned int vring_align,           /* vring alignment requirement */
     VirtIODevice *vdev,                 /* the virtio device owning the queue */
-    void *pages,                        /* vring memory */
+    void *pages,                        /* vring memory  */             // RING内存 : num * sizeof(struct vring_packed_desc) + 2 * sizeof(struct vring_packed_desc_event)
     void(*notify)(struct virtqueue *), /* notification callback */
-    void *control)                      /* virtqueue memory */
+    void *control)                      /* virtqueue memory  */         // HEAP内存 : sizeof(struct virtqueue_packed) + sizeof(struct vring_desc_state_packed) * num
 {
     struct virtqueue_packed *vq = packedvq(control);
     unsigned int i;
@@ -632,7 +662,8 @@ struct virtqueue *vring_new_virtqueue_packed(
     vq->packed.desc_state = vq->desc_states;
 
     RtlZeroMemory(vq->packed.desc_state, num * sizeof(*vq->packed.desc_state));
-    for (i = 0; i < num - 1; i++) {
+    for (i = 0; i < num - 1; i++)
+    {
         vq->packed.desc_state[i].next = i + 1;
     }
 

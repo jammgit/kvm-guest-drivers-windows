@@ -304,6 +304,8 @@ static NTSTATUS vio_modern_query_vq_alloc(VirtIODevice *vdev,
 
     // 怎么马上能获取到这个队列的信息的？
 
+    // 读取queue_size，num就是queue_size
+    //vdev->system->vdev_read_word((ULONG_PTR)(addr))
     /* Check if queue is either not available or already active. */
     num = ioread16(vdev, &cfg->queue_size);
     /* QEMU has a bug where queues don't revert to inactive on device
@@ -321,7 +323,15 @@ static NTSTATUS vio_modern_query_vq_alloc(VirtIODevice *vdev,
     }
 
     *pNumEntries = num;
+    /// packed_ring为true的计算方式如下
+    ///* array of descriptors */
+    //unsigned long res = num * sizeof(struct vring_packed_desc);
+    ///* driver and device event */
+    //res += 2 * sizeof(struct vring_packed_desc_event);
+    //return res;
     *pRingSize = (unsigned long)vring_pci_size(num, vdev->packed_ring);
+    /// packed_ring为true的计算方式如下
+    // sizeof(struct virtqueue_packed) + sizeof(struct vring_desc_state_packed) * qsize;
     *pHeapSize = vring_control_block_size(num, vdev->packed_ring);
 
     return STATUS_SUCCESS;
@@ -340,6 +350,7 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     unsigned long ring_size, heap_size;
     NTSTATUS status;
 
+    // ring_size即是 vring_pci_size(info->num, vdev->packed_ring)
     /* select the queue and query allocation parameters */
     status = vio_modern_query_vq_alloc(vdev, index, &info->num, &ring_size, &heap_size);
     if (!NT_SUCCESS(status))
@@ -374,12 +385,13 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     /* create the vring */
     if (vdev->packed_ring)
     {
-        vq = vring_new_virtqueue_packed(index, info->num,
+        vq = vring_new_virtqueue_packed(index,
+                                        info->num,      // ring queue entry count
                                         SMP_CACHE_BYTES,
                                         vdev,
-                                        info->queue,
+                                        info->queue,    // ring queue memory
                                         vp_notify,      // callback function
-                                        vq_addr);
+                                        vq_addr);       // heap queue memory
     }
     else
     {
