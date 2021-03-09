@@ -299,9 +299,10 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
         return status;
     }
 
+    //
     // 获取终端号，参数-1，因为只创建了一个中断，否则传入queue的索引号（如果一个queue一个中断）
     //
-    // 获取 configInterrupt 的中断号，vioinput没有创建 configInterrupt, 返回VIRTIO_MSI_NO_VECTOR
+    // -1 代表获取 configInterrupt 的中断号，vioinput没有创建 configInterrupt, 返回VIRTIO_MSI_NO_VECTOR
     /* set up the device config interrupt */
     msix_vec = vdev_get_msix_vector(vdev, -1);
 
@@ -331,7 +332,7 @@ NTSTATUS virtio_find_queues(VirtIODevice *vdev,
             &vqs[i],
             vdev,
             i,
-            msix_vec);
+            msix_vec);          // 中断号
         if (!NT_SUCCESS(status))
         {
             goto error_find;

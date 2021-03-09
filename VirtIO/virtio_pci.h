@@ -151,7 +151,7 @@ struct virtio_pci_common_cfg
     __u8 device_status;             /* read-write */
     __u8 config_generation;         /* read-only */
 
-    /* About a specific virtqueue. */
+    /* About a specific virtqueue. */                       // 通过 vio_modern_setup_vq 了解是如何初始化
     __le16 queue_select;            /* read-write */
     __le16 queue_size;              /* read-write, power of 2. */
     __le16 queue_msix_vector;       /* read-write */

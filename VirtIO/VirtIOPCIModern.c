@@ -361,7 +361,9 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     /* get offset of notification word for this vq */
     off = ioread16(vdev, &cfg->queue_notify_off);
 
-    // 通过 DmaEnabler 创建DMA common buffer， 返回虚拟地址
+    //
+    //
+    // 通过 DmaEnabler 创建DMA common buffer， 返回common buffer所描述的内存的虚拟地址
     /* try to allocate contiguous pages, scale down on failure */
     while (!(info->queue = mem_alloc_contiguous_pages(vdev, vring_pci_size(info->num, vdev->packed_ring))))
     {
@@ -389,14 +391,16 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
                                         info->num,      // ring queue entry count
                                         SMP_CACHE_BYTES,
                                         vdev,
-                                        info->queue,    // ring queue memory
+                                        info->queue,    // ring queue memory   // RING内存 : num * sizeof(struct vring_packed_desc) + 2 * sizeof(struct vring_packed_desc_event)
                                         vp_notify,      // callback function
-                                        vq_addr);       // heap queue memory
+                                        vq_addr);       // heap queue memory   // HEAP内存 : sizeof(struct virtqueue_packed) + sizeof(struct vring_desc_state_packed) * num
     }
     else
     {
-        vq = vring_new_virtqueue_split(index, info->num,
-                                       SMP_CACHE_BYTES, vdev,
+        vq = vring_new_virtqueue_split(index,
+                                       info->num,
+                                       SMP_CACHE_BYTES,
+                                       vdev,
                                        info->queue,
                                        vp_notify,       // callback function
                                        vq_addr);
@@ -408,6 +412,8 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
         goto err_new_queue;
     }
 
+    // 这里将queue的物理地址写到PCI（Host来说就是虚拟地址？），HOST以便操作queue?
+    //
     /* activate the queue */
     iowrite16(vdev, info->num, &cfg->queue_size);
     iowrite64_twopart(vdev, mem_get_physical_address(vdev, info->queue),
@@ -437,6 +443,7 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
     }
     else
     {
+        // 映射notify
         vq->notification_addr = vio_modern_map_capability(vdev,
                                                           vdev->notify_map_cap, 2, 2,
                                                           off * vdev->notify_offset_multiplier, 2,
@@ -449,6 +456,7 @@ static NTSTATUS vio_modern_setup_vq(struct virtqueue **queue,
         goto err_map_notify;
     }
 
+    // 传递进来的queue的中断号
     if (msix_vec != VIRTIO_MSI_NO_VECTOR)
     {
         msix_vec = vdev->device->set_queue_vector(vq, msix_vec);

@@ -163,10 +163,11 @@ VIOInputQueuesInterruptDpc(
         VIOInputAddInBuf(
             pContext->EventQ,
             pEvent,
-            VirtIOWdfDeviceGetPhysicalAddress(&pContext->VDevice.VIODevice, pEvent));
+            VirtIOWdfDeviceGetPhysicalAddress(&pContext->VDevice.VIODevice, pEvent));   // 获取pEvent的物理地址（对应Host的虚拟地址？）
     }
     WdfSpinLockRelease(pContext->EventQLock);
 
+    // 查看StatusQ引用，貌似是keyboard用的；
     //
     // 1. 为什么 StatusQ 获取的内存归还到 StatusQMemBlock？
     //

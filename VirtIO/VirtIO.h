@@ -5,12 +5,13 @@
 
 #define scatterlist VirtIOBufferDescriptor
 
-struct VirtIOBufferDescriptor {
+struct VirtIOBufferDescriptor
+{
     PHYSICAL_ADDRESS physAddr;
     ULONG length;
 };
 
-typedef int (*proc_virtqueue_add_buf)(
+typedef int(*proc_virtqueue_add_buf)(
     struct virtqueue *vq,
     struct scatterlist sg[],
     unsigned int out_num,
@@ -40,19 +41,20 @@ typedef BOOLEAN(*proc_virtqueue_has_buf)(struct virtqueue *vq);
 typedef void(*proc_virtqueue_shutdown)(struct virtqueue *vq);
 
 /* Represents one virtqueue; only data pointed to by the vring structure is exposed to the host */
-struct virtqueue {
+struct virtqueue
+{
     VirtIODevice *vdev;
     unsigned int index;
-    void (*notification_cb)(struct virtqueue *vq);
+    void(*notification_cb)(struct virtqueue *vq);
     void         *notification_addr;
     void         *avail_va;
     void         *used_va;
-    proc_virtqueue_add_buf add_buf;
+    proc_virtqueue_add_buf add_buf;                                     // 归还buff
     proc_virtqueue_kick_prepare kick_prepare;
     proc_virtqueue_kick_always kick_always;
-    proc_virtqueue_get_buf get_buf;
-    proc_virtqueue_disable_cb disable_cb;
-    proc_virtqueue_enable_cb enable_cb;
+    proc_virtqueue_get_buf get_buf;                                     // 中断回调后，获取buff内容
+    proc_virtqueue_disable_cb disable_cb;                               // Disable Interrupt时调用
+    proc_virtqueue_enable_cb enable_cb;                                 // Enable Interrupt时调用
     proc_virtqueue_enable_cb_delayed enable_cb_delayed;
     proc_virtqueue_detach_unused_buf detach_unused_buf;
     proc_virtqueue_is_interrupt_enabled is_interrupt_enabled;

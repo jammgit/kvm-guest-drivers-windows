@@ -61,8 +61,8 @@ typedef struct virtio_wdf_driver
     PVIRTIO_WDF_QUEUE_PARAM pQueueParams;
 
     WDFDMAENABLER           DmaEnabler;
-    WDFCOLLECTION           MemoryBlockCollection;
-    WDFSPINLOCK             DmaSpinlock;
+    WDFCOLLECTION           MemoryBlockCollection;  // 记录所有通过DmaEnabler分配的common buffer
+    WDFSPINLOCK             DmaSpinlock;            // 保护 MemoryBlockCollection
     BOOLEAN                 bLegacyMode;
 } VIRTIO_WDF_DRIVER, *PVIRTIO_WDF_DRIVER;
 
