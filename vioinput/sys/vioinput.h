@@ -75,9 +75,18 @@ typedef struct _tagInputClassCommon
 #define HID_REPORT_DATA_OFFSET 1
 
     // this class's HID report
+    // 内存容量为 cbHidReportSize
     PUCHAR pHidReport;
+
     // size of this class's data in the HID report
+    //
+    //1 + // report ID
+    //sizeof(INPUT_CLASS_TABLET_SLOT) * pTabletDesc->uMaxContacts + // max contacts * per-contact packet. See INPUT_CLASS_TABLET_SLOT and INPUT_CLASS_TABLET for layout details.
+    //1 + // Actual contact count
+    //(pTabletDesc->bMscTs ? sizeof(LONG) : 0) // Scan time
+    //;
     SIZE_T cbHidReportSize;
+
     // report ID of this class
     UCHAR uReportID;
     // the HID report is dirty and should be sent up

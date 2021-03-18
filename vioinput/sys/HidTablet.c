@@ -75,7 +75,9 @@ typedef struct _tagInputClassTablet
     BOOLEAN bMscTs;
     ULONG uMaxContacts;
     ULONG uLastMTSlot;
+    // VIOInputAlloc(sizeof(INPUT_CLASS_TABLET_SLOT) * pTabletDesc->uMaxContacts);
     PINPUT_CLASS_TABLET_SLOT pContactStat;
+    // VIOInputAlloc(sizeof(INPUT_CLASS_TABLET_TRACKING_ID) * pTabletDesc->uMaxContacts);
     PINPUT_CLASS_TABLET_TRACKING_ID pTrackingID;
 
     /*
@@ -274,6 +276,7 @@ HIDTabletEventToCollect(
                 pReport[HID_REPORT_DATA_OFFSET + sizeof(INPUT_CLASS_TABLET_SLOT) * pTabletDesc->uMaxContacts] = uContacts;
                 for (uNumContacts = 0; uNumContacts < pTabletDesc->uMaxContacts; uNumContacts++)
                 {
+                    // 源数据可能不连续
                     if (pTabletDesc->pTrackingID[uNumContacts].uID != -1)
                     {
                         RtlCopyMemory(
@@ -285,7 +288,9 @@ HIDTabletEventToCollect(
 
                 if (uContacts)
                 {
+                    // 记录个数
                     pReport[HID_REPORT_DATA_OFFSET + sizeof(INPUT_CLASS_TABLET_SLOT) * pTabletDesc->uMaxContacts] = uContacts;
+                    // 设置dirty代表有新数据
                     pClass->bDirty = TRUE;
 
                     KIRQL irql;

@@ -283,6 +283,13 @@ ProcessInputEvent(
             // only touch device set this callback
             //
             // Ask each class if any collection needs before report
+            //
+            // HIDTabletEventToCollect
+            // 从外部结构体数据继承到内部成员，并设置dirty标志位
+            // INPUT_CLASS_TABLET -> INPUT_CLASS_COMMON
+            //
+            // 将外部数据拷贝到内部后，外部的contact/trackid没有复位buffer；
+            //
             if (pContext->InputClasses[i]->EventToCollectFunc)
             {
                 pContext->InputClasses[i]->EventToCollectFunc(
@@ -290,6 +297,7 @@ ProcessInputEvent(
                     pEvent);
             }
 
+            // 使用内部成员INPUT_CLASS_COMMON数据完成请求，没有复位buffer
             // InputClass -> hidQueue and Complete IRQ
             CompleteHIDQueueRequest(pContext, pContext->InputClasses[i]);
         }
@@ -298,6 +306,7 @@ ProcessInputEvent(
     // ask each class to translate the input event into a HID report
     for (i = 0; i < pContext->uNumOfClasses; i++)
     {
+        // HIDTabletEventToReport
         pContext->InputClasses[i]->EventToReportFunc(
             pContext->InputClasses[i],
             pEvent);
