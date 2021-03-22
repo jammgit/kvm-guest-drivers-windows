@@ -262,18 +262,18 @@ ProcessInputEvent(
         pEvent->code,
         pEvent->value);
 
-    KIRQL irql;
-    KeAcquireSpinLock(&lastDataLock, &irql);
-    if (pEvent->type == 1 && pEvent->code == 330 && pEvent->value == 1)
-    {
-        pressed = TRUE;
-        dataLen = 0;
-    }
-    else if (pEvent->type == 1 && pEvent->code == 330 && pEvent->value == 0)
-    {
-        pressed = FALSE;
-    }
-    KeReleaseSpinLock(&lastDataLock, irql);
+    //KIRQL irql;
+    //KeAcquireSpinLock(&lastDataLock, &irql);
+    //if (pEvent->type == 1 && pEvent->code == 330 && pEvent->value == 1)
+    //{
+    //    pressed = TRUE;
+    //    dataLen = 0;
+    //}
+    //else if (pEvent->type == 1 && pEvent->code == 330 && pEvent->value == 0)
+    //{
+    //    pressed = FALSE;
+    //}
+    //KeReleaseSpinLock(&lastDataLock, irql);
 
     if (pEvent->type == EV_SYN)
     {
@@ -306,7 +306,10 @@ ProcessInputEvent(
     // ask each class to translate the input event into a HID report
     for (i = 0; i < pContext->uNumOfClasses; i++)
     {
+        // 数据收集
+        //
         // HIDTabletEventToReport
+        //
         pContext->InputClasses[i]->EventToReportFunc(
             pContext->InputClasses[i],
             pEvent);

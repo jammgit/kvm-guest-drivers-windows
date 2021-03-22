@@ -208,7 +208,7 @@ VIOInputEvtDeviceAdd(
         return status;
     }
 
-    HIDInitialzeData(hDevice);
+    //HIDInitialzeData(hDevice);
 
     RtlZeroMemory(&pContext->HidDeviceAttributes, sizeof(HID_DEVICE_ATTRIBUTES));
     pContext->HidDeviceAttributes.Size = sizeof(HID_DEVICE_ATTRIBUTES);

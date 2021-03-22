@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Socket provider registration
  *
  * Copyright (c) 2019 Virtuozzo International GmbH
@@ -37,7 +37,7 @@
 
  // {9980498C-E732-482B-9F67-924273A56666}
 DEFINE_GUID(GUID_VIOSOCK_STREAM,
-    0x9980498c, 0xe732, 0x482b, 0x9f, 0x67, 0x92, 0x42, 0x73, 0xa5, 0x66, 0x66);
+            0x9980498c, 0xe732, 0x482b, 0x9f, 0x67, 0x92, 0x42, 0x73, 0xa5, 0x66, 0x66);
 
 #define VIOSOCK_PROTOCOL_STREAM _T("Virtio Vsock STREAM")
 
@@ -69,7 +69,7 @@ static WSAPROTOCOL_INFO g_ProtocolInfo = {
 
 #ifdef AMD64
 BOOL
-InstallProtocol()
+InstaellProtocol()
 {
     BOOL bRes = FALSE;
     INT iErrno, iRes = WSCInstallProvider64_32((LPGUID)&GUID_VIOSOCK_STREAM, VIOSOCK_DLL_PATH, &g_ProtocolInfo, 1, &iErrno);

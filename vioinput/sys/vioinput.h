@@ -262,7 +262,7 @@ typedef struct virtio_input_event_with_request
 #define ABS_MISC      0x28
 
 // ABS_MT event codes defined in include/uapi/linux/input-event-codes.h
-#define ABS_MT_SLOT         0x2f    /* MT slot being modified */
+#define ABS_MT_SLOT         0x2f    /*47 MT slot being modified */
 #define ABS_MT_TOUCH_MAJOR  0x30    /*48 Major axis of touching ellipse */
 #define ABS_MT_TOUCH_MINOR  0x31    /*49 Minor axis (omit if circular) */
 #define ABS_MT_WIDTH_MAJOR  0x32    /* Major axis of approaching ellipse */

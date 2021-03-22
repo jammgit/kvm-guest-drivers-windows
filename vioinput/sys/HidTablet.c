@@ -364,7 +364,9 @@ HIDTabletEventToReport(
             }
             switch (pEvent->code)
             {
-            case ABS_MT_SLOT:
+            case ABS_MT_SLOT:   // 47
+                // 更新最后一个按下的触摸点索引;
+                // 多点触摸时，uLastMTSlot会动态随机切换；
                 /*
                  * Subsequent identifiable MT event will re-use last set MT_SLOT
                  *   until new slot arrives so we need save it for later usage
@@ -396,7 +398,9 @@ HIDTabletEventToReport(
             case ABS_MT_POSITION_Y:
                 pReportSlot->uAxisY = (USHORT)pEvent->value;
                 break;
-            case ABS_MT_TRACKING_ID:
+            case ABS_MT_TRACKING_ID:    // 57
+                // 当一个点触摸下，value>0，就会发来一个大于0的track ID；
+                // 当release触摸时，value<0，根据当前记录的 uLastMTSlot 释放触摸点；
                 /*
                  * Check if negative tracking ID for actual contact up & down.
                  * Contact ID is bind to slot until changed, save it to operate
@@ -406,12 +410,17 @@ HIDTabletEventToReport(
                  */
                 if ((LONG)pEvent->value < 0)
                 {
+                    // 标记该SLOT对应的触摸点已释放，下次同步时就会复位该SLOT
                     pTabletDesc->pTrackingID[pTabletDesc->uLastMTSlot].bPendingDel = TRUE;
                     pReportSlot->uFlags &= ~0x01;
                 }
                 else
                 {
                     pTabletDesc->pTrackingID[pTabletDesc->uLastMTSlot].uID = (LONG)pEvent->value;
+                    //if ((LONG)pEvent->value != -1)
+                    //{
+                    //    pTabletDesc->pTrackingID[pTabletDesc->uLastMTSlot].bPendingDel = TRUE;
+                    //}
                     pReportSlot->uContactID = (USHORT)pEvent->value;
                     pReportSlot->uFlags |= 0x01;
                 }
@@ -443,11 +452,11 @@ HIDTabletEventToReport(
             }
         }
         break;
-    case EV_KEY:
+    case EV_KEY:    // type: 1
         switch (pEvent->code)
         {
         case BTN_LEFT:
-        case BTN_TOUCH:
+        case BTN_TOUCH:     // code: 300
             // tip switch + in range
             uBits = 0x03;
             break;
@@ -496,7 +505,7 @@ HIDTabletEventToReport(
             break;
         }
         break;
-    case EV_SYN:
+    case EV_SYN:            //
         switch (pEvent->code)
         {
         case SYN_REPORT:
@@ -515,6 +524,7 @@ HIDTabletEventToReport(
                 {
                     if (pTabletDesc->pTrackingID[uNumContacts].bPendingDel)
                     {
+                        // 复位SLOT，表示该SLOT不再可用
                         pTabletDesc->pTrackingID[uNumContacts].uID = -1;
                         pTabletDesc->pTrackingID[uNumContacts].bPendingDel = FALSE;
                     }
