@@ -160,6 +160,44 @@ EvtIoDeviceControl(
         }
         break;
 
+    case IOCTL_HID_GET_FEATURE:
+        TraceEvents(TRACE_LEVEL_VERBOSE, DBG_IOCTLS, "IOCTL_HID_GET_FEATURE\n");
+
+        WDF_REQUEST_PARAMETERS_INIT(&params);
+        WdfRequestGetParameters(Request, &params);
+
+        if (params.Parameters.DeviceIoControl.OutputBufferLength < sizeof(HID_XFER_PACKET))
+        {
+            status = STATUS_BUFFER_TOO_SMALL;
+        }
+        else
+        {
+            PHID_XFER_PACKET pFeaturePkt = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
+
+            if (pFeaturePkt == NULL)
+            {
+                status = STATUS_INVALID_DEVICE_REQUEST;
+            }
+            else
+            {
+                ULONG i;
+
+                status = STATUS_NOT_IMPLEMENTED;
+                for (i = 0; i < pContext->uNumOfClasses; i++)
+                {
+                    if (pContext->InputClasses[i]->GetFeatureFunc)
+                    {
+                        status = pContext->InputClasses[i]->GetFeatureFunc(pContext->InputClasses[i], pFeaturePkt);
+                        if (!NT_SUCCESS(status))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        break;
+
     default:
         TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTLS,
                     "Unrecognized IOCTL %d\n", IoControlCode);
@@ -225,6 +263,13 @@ ProcessInputEvent(
         // send report(s) up
         for (i = 0; i < pContext->uNumOfClasses; i++)
         {
+            // Ask each class if any collection needs before report
+            if (pContext->InputClasses[i]->EventToCollectFunc)
+            {
+                pContext->InputClasses[i]->EventToCollectFunc(
+                    pContext->InputClasses[i],
+                    pEvent);
+            }
             CompleteHIDQueueRequest(pContext, pContext->InputClasses[i]);
         }
     }
@@ -415,7 +460,7 @@ VIOInputBuildReportDescriptor(PINPUT_DEVICE pContext)
 {
     DYNAMIC_ARRAY ReportDescriptor = { NULL };
     NTSTATUS status = STATUS_SUCCESS;
-    VIRTIO_INPUT_CFG_DATA KeyData, RelData, AbsData, LedData;
+    VIRTIO_INPUT_CFG_DATA KeyData, RelData, AbsData, LedData, MscData;
     SIZE_T cbReportDescriptor;
     UCHAR i, uReportID = 0;
 
@@ -449,6 +494,16 @@ VIOInputBuildReportDescriptor(PINPUT_DEVICE pContext)
         VirtIOWdfDeviceGet(
             &pContext->VDevice, offsetof(struct virtio_input_config, u.bitmap[i]),
             &AbsData.u.bitmap[i], 1);
+    }
+
+    // Misc config
+    MscData.size = SelectInputConfig(pContext, VIRTIO_INPUT_CFG_EV_BITS, EV_MSC);
+    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_INIT, "Got EV_MSC bits size %d\n", MscData.size);
+    for (i = 0; i < MscData.size; i++)
+    {
+        VirtIOWdfDeviceGet(
+            &pContext->VDevice, offsetof(struct virtio_input_config, u.bitmap[i]),
+            &MscData.u.bitmap[i], 1);
     }
 
     // if we have any relative axes, we'll expose a mouse device
@@ -488,7 +543,8 @@ VIOInputBuildReportDescriptor(PINPUT_DEVICE pContext)
             pContext,
             &ReportDescriptor,
             &AbsData,
-            &KeyData);
+            &KeyData,
+            &MscData);
         if (!NT_SUCCESS(status))
         {
             goto Exit;
