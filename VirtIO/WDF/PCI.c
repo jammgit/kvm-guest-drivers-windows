@@ -83,6 +83,17 @@ NTSTATUS PCIAllocBars(WDFCMRESLIST ResourcesTranslated,
                     return STATUS_NOT_FOUND;
                 }
 
+                // 如果CPU支持分离的I/O地址空间，而这个给定端口又属于这个空间，那么这个标志将有CM_RESOURCE_PORT_IO设置。
+                //
+                // 如果没有设置CM_RESOURCE_PORT_IO标志，这可能是在一个Alpha平台或其它RISC平台上，
+                // 你必须调用MmMapIoSpace函数来获得能访问该端口的内核模式虚拟地址。访问将真正使用内存引用，
+                // 但在驱动程序中你仍要调用HAL中的PORT风格的例程、
+                //
+                // 如果设置了CM_RESOURCE_PORT_IO标志，这将在一个x86平台上，因此你不必映射端口地址。
+                // 所以，在你的驱动程序中你应该使用PORT风格的HAL例程访问设备端口。
+                // HAL例程要求一个PUCHAR类型的端口地址参数，因此我们需要把基地址强制转换成这个类型。
+                // QuadPart引用将使你得到一个与编译平台相适应的32位或64位指针。
+                //
                 pBar->bPortSpace = !!(pResDescriptor->Flags & CM_RESOURCE_PORT_IO);
                 pBar->BasePA = pResDescriptor->u.Memory.Start;
                 pBar->uLength = pResDescriptor->u.Memory.Length;

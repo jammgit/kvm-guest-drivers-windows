@@ -136,7 +136,16 @@ VIOInputEvtDeviceAdd(
         return status;
     }
 
-    // 注册中断、DPC回调
+    // 注册中断、DPC回调；
+    //
+    // https://docs.microsoft.com/en-us/windows-hardware/drivers/wdf/introduction-to-hardware-resources
+    // 第9点，按照微软的意思，调用 WdfInterruptCreate 后，
+    // 会从 list 找到对应 interrupt resource 与 interrupt object 绑定，然后进入 uninitialized D0 state；
+    //
+    // 最终会触发回调 VIOInputEvtDevicePrepareHardware，告诉相关 resource 的情况。
+    //
+    // virtio 代码中，将中断号写到了 PCI设备配置空间。
+    //
     status = VIOInputInitInterruptHandling(hDevice);
     if (!NT_SUCCESS(status))
     {
