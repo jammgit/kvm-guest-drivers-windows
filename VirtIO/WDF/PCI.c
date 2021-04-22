@@ -74,6 +74,9 @@ NTSTATUS PCIAllocBars(WDFCMRESLIST ResourcesTranslated,
                     return STATUS_INSUFFICIENT_RESOURCES;
                 }
 
+                //
+                //  agent 类型的PCI设备，6个BAR
+                //
                 /* unfortunately WDF doesn't tell us BAR indices */
                 pBar->iBar = virtio_get_bar_index(&PCIHeader, pResDescriptor->u.Memory.Start);
                 if (pBar->iBar < 0)
